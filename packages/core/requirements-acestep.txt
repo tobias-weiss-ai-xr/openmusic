@@ -1,0 +1,28 @@
+# ACE-Step 1.5 dependencies for dub techno validation
+# These are the core dependencies needed to run ACE-Step generation.
+# Full list: see ACE-Step-1.5/pyproject.toml or ACE-Step-1.5/requirements.txt
+#
+# Install with: pip install -r requirements-acestep.txt
+# Or use ACE-Step's own: cd ACE-Step-1.5 && uv sync
+
+# PyTorch (install platform-appropriate version from pyproject.toml)
+# Linux x86_64 CUDA 12.8:
+torch==2.10.0+cu128
+torchvision==0.25.0+cu128
+torchaudio==2.10.0+cu128
+--extra-index-url https://download.pytorch.org/whl/cu128
+
+# Core ACE-Step dependencies
+transformers>=4.51.0,<4.58.0
+diffusers
+loguru>=0.7.3
+einops>=0.8.1
+accelerate>=1.12.0
+scipy>=1.10.1
+soundfile>=0.13.1
+safetensors>=0.7.0
+numba>=0.63.1
+vector-quantize-pytorch>=1.27.15
+torchcodec>=0.9.1
+torchao
+toml

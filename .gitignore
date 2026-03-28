@@ -1,0 +1,12 @@
+node_modules/
+__pycache__/
+*.pyc
+.venv/
+*.wav
+*.flac
+*.mp3
+.DS_Store
+dist/
+.sisyphus/evidence/
+ACE-Step-1.5/
+poc/

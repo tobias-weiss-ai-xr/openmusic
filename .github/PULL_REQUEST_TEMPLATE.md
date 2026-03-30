@@ -1,0 +1,9 @@
+- [ ] Summary of changes
+- [ ] Related issues
+- [ ] How to test
+- [ ] Screenshots (optional)
+- [ ] Checklist:
+- [ ] Code changes follow style guidelines
+- [ ] Tests added/updated
+- [ ] Documentation updated (if needed)
+- [ ] Breakages or compatibility concerns

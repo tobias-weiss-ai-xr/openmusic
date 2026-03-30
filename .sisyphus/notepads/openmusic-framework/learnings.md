@@ -92,3 +92,25 @@ Date: Sat 28 Mar 06:30 CET 2026
 - Current GPU: RTX 2060, 6GB VRAM (Tier 2)
 - LM not viable on 6GB; DiT-only mode with --use-lm omitted
 - Test script warns about low VRAM and suggests skipping LM
+
+=== Learnings from F1 Architecture Bug Fixes ===
+
+Date: Mon 30 Mar 2026
+
+## Integration Layer Patterns
+- Bridge config schema changes require updating BOTH Python emitter and TypeScript receiver simultaneously
+- TypeScriptBridge already had correct EFFECTS_BIN path (packages/effects/dist/index.js) — mix.py had a stale duplicate
+- Refactoring to use TypeScriptBridge eliminated subprocess duplication AND fixed the path bug in one change
+
+## Test Mocking Surface Changes
+- When refactoring from raw subprocess to TypeScriptBridge, all tests that mocked `subprocess.run` and `shutil.copy2` must be updated to mock `TypeScriptBridge.call_audio_engine`
+- Pipeline tests that mock MixOrchestrator but don't mock new dependencies (MixArranger, AudioEncoder) will fail
+- Integration tests using `_capture_bridge_config` pattern need complete rewrite when mocking surface changes
+
+## CLI Entry Point Testing
+- Vitest caches module imports — `vi.resetModules()` + dynamic `import()` needed to re-execute top-level CLI guards
+- `process.exit` mocking must use throw-based pattern to prevent actual process termination in tests
+
+## Effects Preset Synchronization
+- Python _EFFECTS_PRESETS dict must exactly match TypeScript DEEP_DUB/MINIMAL_DUB/CLUB_DUB constants
+- Any preset change requires updating both Python and TypeScript

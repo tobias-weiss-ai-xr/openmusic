@@ -9,6 +9,10 @@
     "test": "vitest run --config ../../vitest.config.ts"
   },
   "devDependencies": {
+    "@types/node": "^25.5.0",
     "vitest": "^4.1.2"
+  },
+  "dependencies": {
+    "web-audio-api": "^1.2.0"
   }
 }

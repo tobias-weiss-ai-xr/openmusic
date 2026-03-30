@@ -280,28 +280,21 @@ _BRIDGE_REQUIRED_KEYS = {
     "duration",
     "bpm",
     "key",
-    "inputStems",
-    "outputPath",
     "effects",
     "pattern",
 }
 
 
 class TestBridgeConfigSchema:
-    """Validate bridge config JSON against TypeScript BridgeConfig schema."""
-
     def _capture_bridge_config(self, orch: MixOrchestrator, stem: Path) -> dict:
         captured: dict = {}
 
-        def intercept(cmd, **_kw):
-            idx = cmd.index("--config") + 1
-            with open(cmd[idx]) as f:
-                captured.update(json.load(f))
-            return MagicMock(returncode=0, stderr="")
+        def intercept(input_files, output_path, config):
+            captured.update(config)
+            return output_path
 
-        with patch("openmusic.orchestrator.mix.subprocess.run", side_effect=intercept):
-            with patch("openmusic.orchestrator.mix.shutil.copy2"):
-                orch._process_segment(stem)
+        with patch.object(orch.bridge, "call_audio_engine", side_effect=intercept):
+            orch._process_segment(stem)
 
         return captured
 
@@ -313,18 +306,39 @@ class TestBridgeConfigSchema:
         missing = _BRIDGE_REQUIRED_KEYS - set(bridge_cfg)
         assert not missing, f"Missing keys: {missing}"
 
-    def test_effects_block_has_filter_delay_reverb(self, sample_wav: Path) -> None:
+    def test_effects_block_has_all_five_effects(self, sample_wav: Path) -> None:
         config = MixConfig(length=60, segment_duration=60)
         orch = MixOrchestrator(config)
         bridge_cfg = self._capture_bridge_config(orch, sample_wav)
 
         effects = bridge_cfg["effects"]
-        for key in ("filter", "delay", "reverb"):
+        for key in ("filter", "delay", "reverb", "distortion", "vinyl"):
             assert key in effects, f"effects.{key} missing"
 
         assert "type" in effects["filter"]
         assert "frequency" in effects["filter"]
         assert "Q" in effects["filter"]
+        assert "enabled" in effects["filter"]
+
+        assert "primaryTime" in effects["delay"]
+        assert "secondaryTime" in effects["delay"]
+        assert "enabled" in effects["delay"]
+
+        assert "decay" in effects["reverb"]
+        assert "preDelay" in effects["reverb"]
+        assert "mix" in effects["reverb"]
+        assert "enabled" in effects["reverb"]
+
+    def test_effects_block_has_enabled_flags(self, sample_wav: Path) -> None:
+        config = MixConfig(length=60, segment_duration=60)
+        orch = MixOrchestrator(config)
+        bridge_cfg = self._capture_bridge_config(orch, sample_wav)
+
+        effects = bridge_cfg["effects"]
+        for key in ("filter", "delay", "reverb", "distortion", "vinyl"):
+            assert effects[key]["enabled"] is True, (
+                f"effects.{key}.enabled should be True"
+            )
 
     def test_pattern_block_has_style_and_variation(self, sample_wav: Path) -> None:
         config = MixConfig(length=60, segment_duration=60)
@@ -334,18 +348,6 @@ class TestBridgeConfigSchema:
         pattern = bridge_cfg["pattern"]
         assert "style" in pattern
         assert "variation" in pattern
-
-    def test_input_stems_is_list_of_dicts(self, sample_wav: Path) -> None:
-        config = MixConfig(length=60, segment_duration=60)
-        orch = MixOrchestrator(config)
-        bridge_cfg = self._capture_bridge_config(orch, sample_wav)
-
-        stems = bridge_cfg["inputStems"]
-        assert isinstance(stems, list)
-        assert len(stems) >= 1
-        for stem in stems:
-            assert "path" in stem
-            assert "role" in stem
 
     def test_config_reflects_mix_config_values(self, sample_wav: Path) -> None:
         config = MixConfig(length=60, segment_duration=60, bpm=130, key="Am")
@@ -416,16 +418,23 @@ class TestProgressReportingFormat:
 
 
 class TestPipelineGeneratorOutput:
-    """run_pipeline yields correct PipelineResult objects."""
-
     def test_pipeline_yields_all_stages(self) -> None:
         config = MixConfig(length=60, segment_duration=60)
 
-        with patch("openmusic.orchestrator.pipeline.MixOrchestrator") as MockOrch:
+        with (
+            patch("openmusic.orchestrator.pipeline.MixOrchestrator") as MockOrch,
+            patch("openmusic.orchestrator.pipeline.MixArranger") as MockArranger,
+            patch("openmusic.orchestrator.pipeline.AudioEncoder") as MockEncoder,
+        ):
             mock_orch = MockOrch.return_value
             mock_orch.segment_count = 1
             mock_orch._generate_segment.return_value = Path("/tmp/raw.wav")
             mock_orch._process_segment.return_value = Path("/tmp/processed.wav")
+
+            MockArranger.return_value.arrange_segments.return_value = Path(
+                "/tmp/arranged.npy"
+            )
+            MockEncoder.return_value.encode_flac.return_value = Path("mix.flac")
 
             results = list(run_pipeline(config))
 
@@ -437,11 +446,20 @@ class TestPipelineGeneratorOutput:
     def test_pipeline_results_are_successful(self) -> None:
         config = MixConfig(length=60, segment_duration=60)
 
-        with patch("openmusic.orchestrator.pipeline.MixOrchestrator") as MockOrch:
+        with (
+            patch("openmusic.orchestrator.pipeline.MixOrchestrator") as MockOrch,
+            patch("openmusic.orchestrator.pipeline.MixArranger") as MockArranger,
+            patch("openmusic.orchestrator.pipeline.AudioEncoder") as MockEncoder,
+        ):
             mock_orch = MockOrch.return_value
             mock_orch.segment_count = 1
             mock_orch._generate_segment.return_value = Path("/tmp/raw.wav")
             mock_orch._process_segment.return_value = Path("/tmp/processed.wav")
+
+            MockArranger.return_value.arrange_segments.return_value = Path(
+                "/tmp/arranged.npy"
+            )
+            MockEncoder.return_value.encode_flac.return_value = Path("mix.flac")
 
             results = list(run_pipeline(config))
 
@@ -454,12 +472,21 @@ class TestPipelineGeneratorOutput:
     def test_pipeline_reports_generation_failure(self) -> None:
         config = MixConfig(length=60, segment_duration=60)
 
-        with patch("openmusic.orchestrator.pipeline.MixOrchestrator") as MockOrch:
+        with (
+            patch("openmusic.orchestrator.pipeline.MixOrchestrator") as MockOrch,
+            patch("openmusic.orchestrator.pipeline.MixArranger") as MockArranger,
+            patch("openmusic.orchestrator.pipeline.AudioEncoder") as MockEncoder,
+        ):
             mock_orch = MockOrch.return_value
             mock_orch.segment_count = 1
             mock_orch._generate_segment.side_effect = RuntimeError(
                 "ACE-Step not available"
             )
+
+            MockArranger.return_value.arrange_segments.return_value = Path(
+                "/tmp/arranged.npy"
+            )
+            MockEncoder.return_value.encode_flac.return_value = Path("mix.flac")
 
             results = list(run_pipeline(config))
 
@@ -471,11 +498,20 @@ class TestPipelineGeneratorOutput:
     def test_pipeline_handles_process_failure(self) -> None:
         config = MixConfig(length=60, segment_duration=60)
 
-        with patch("openmusic.orchestrator.pipeline.MixOrchestrator") as MockOrch:
+        with (
+            patch("openmusic.orchestrator.pipeline.MixOrchestrator") as MockOrch,
+            patch("openmusic.orchestrator.pipeline.MixArranger") as MockArranger,
+            patch("openmusic.orchestrator.pipeline.AudioEncoder") as MockEncoder,
+        ):
             mock_orch = MockOrch.return_value
             mock_orch.segment_count = 1
             mock_orch._generate_segment.return_value = Path("/tmp/raw.wav")
             mock_orch._process_segment.side_effect = RuntimeError("Node.js crashed")
+
+            MockArranger.return_value.arrange_segments.return_value = Path(
+                "/tmp/arranged.npy"
+            )
+            MockEncoder.return_value.encode_flac.return_value = Path("mix.flac")
 
             results = list(run_pipeline(config))
 
@@ -485,11 +521,20 @@ class TestPipelineGeneratorOutput:
     def test_pipeline_multi_segment(self) -> None:
         config = MixConfig(length=180, segment_duration=60)
 
-        with patch("openmusic.orchestrator.pipeline.MixOrchestrator") as MockOrch:
+        with (
+            patch("openmusic.orchestrator.pipeline.MixOrchestrator") as MockOrch,
+            patch("openmusic.orchestrator.pipeline.MixArranger") as MockArranger,
+            patch("openmusic.orchestrator.pipeline.AudioEncoder") as MockEncoder,
+        ):
             mock_orch = MockOrch.return_value
             mock_orch.segment_count = 3
             mock_orch._generate_segment.return_value = Path("/tmp/raw.wav")
             mock_orch._process_segment.return_value = Path("/tmp/processed.wav")
+
+            MockArranger.return_value.arrange_segments.return_value = Path(
+                "/tmp/arranged.npy"
+            )
+            MockEncoder.return_value.encode_flac.return_value = Path("mix.flac")
 
             results = list(run_pipeline(config))
 
@@ -504,3 +549,51 @@ class TestPipelineGeneratorOutput:
         assert len(gen_results) == 3
         assert len(proc_results) == 3
         assert len(export_results) == 1
+
+    def test_pipeline_calls_arranger_with_segment_paths(self) -> None:
+        config = MixConfig(length=60, segment_duration=60)
+
+        with (
+            patch("openmusic.orchestrator.pipeline.MixOrchestrator") as MockOrch,
+            patch("openmusic.orchestrator.pipeline.MixArranger") as MockArranger,
+            patch("openmusic.orchestrator.pipeline.AudioEncoder") as MockEncoder,
+        ):
+            mock_orch = MockOrch.return_value
+            mock_orch.segment_count = 1
+            processed_path = Path("/tmp/processed.wav")
+            mock_orch._generate_segment.return_value = Path("/tmp/raw.wav")
+            mock_orch._process_segment.return_value = processed_path
+
+            arranged_path = Path("/tmp/arranged.npy")
+            MockArranger.return_value.arrange_segments.return_value = arranged_path
+            MockEncoder.return_value.encode_flac.return_value = Path("mix.flac")
+
+            list(run_pipeline(config))
+
+        MockArranger.return_value.arrange_segments.assert_called_once()
+        call_args = MockArranger.return_value.arrange_segments.call_args
+        assert str(processed_path) in call_args[0][0]
+
+    def test_pipeline_calls_encoder_with_arranged_and_output(self) -> None:
+        config = MixConfig(length=60, segment_duration=60, output_path="final.flac")
+
+        with (
+            patch("openmusic.orchestrator.pipeline.MixOrchestrator") as MockOrch,
+            patch("openmusic.orchestrator.pipeline.MixArranger") as MockArranger,
+            patch("openmusic.orchestrator.pipeline.AudioEncoder") as MockEncoder,
+        ):
+            mock_orch = MockOrch.return_value
+            mock_orch.segment_count = 1
+            mock_orch._generate_segment.return_value = Path("/tmp/raw.wav")
+            mock_orch._process_segment.return_value = Path("/tmp/processed.wav")
+
+            arranged_path = Path("/tmp/arranged.npy")
+            MockArranger.return_value.arrange_segments.return_value = arranged_path
+            MockEncoder.return_value.encode_flac.return_value = Path("final.flac")
+
+            list(run_pipeline(config))
+
+        MockEncoder.return_value.encode_flac.assert_called_once()
+        call_args = MockEncoder.return_value.encode_flac.call_args
+        assert call_args[0][0] == arranged_path
+        assert str(call_args[0][1]) == "final.flac"

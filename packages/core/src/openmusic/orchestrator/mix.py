@@ -1,12 +1,123 @@
-import json
 import math
-import shutil
-import subprocess
-import tempfile
 from dataclasses import dataclass, field
 from pathlib import Path
 
 from openmusic.acestep import ACEStepGenerator
+from openmusic.bridge.typescript_bridge import TypeScriptBridge
+
+_EFFECTS_PRESETS: dict[str, dict] = {
+    "deep_dub": {
+        "delay": {
+            "primaryTime": 0.375,
+            "primaryFeedback": 0.5,
+            "primaryMix": 0.6,
+            "secondaryTime": 0.28125,
+            "secondaryFeedback": 0.4,
+            "secondaryMix": 0.5,
+            "enabled": True,
+        },
+        "reverb": {
+            "decay": 4.0,
+            "preDelay": 30,
+            "mix": 0.5,
+            "inputFilterFreq": 800,
+            "inputFilterQ": 1.5,
+            "enabled": True,
+        },
+        "filter": {
+            "type": "bandpass",
+            "frequency": 600,
+            "Q": 3.0,
+            "lfoRate": 0.1,
+            "lfoDepth": 150,
+            "enabled": True,
+        },
+        "distortion": {
+            "amount": 0.2,
+            "mix": 0.3,
+            "enabled": True,
+        },
+        "vinyl": {
+            "level": 0.25,
+            "hissLevel": 0.15,
+            "enabled": True,
+        },
+    },
+    "minimal_dub": {
+        "delay": {
+            "primaryTime": 0.375,
+            "primaryFeedback": 0.3,
+            "primaryMix": 0.35,
+            "secondaryTime": 0.28125,
+            "secondaryFeedback": 0.2,
+            "secondaryMix": 0.25,
+            "enabled": True,
+        },
+        "reverb": {
+            "decay": 2.0,
+            "preDelay": 20,
+            "mix": 0.25,
+            "inputFilterFreq": 1000,
+            "inputFilterQ": 1.0,
+            "enabled": True,
+        },
+        "filter": {
+            "type": "bandpass",
+            "frequency": 900,
+            "Q": 2.0,
+            "lfoRate": 0.2,
+            "lfoDepth": 80,
+            "enabled": True,
+        },
+        "distortion": {
+            "amount": 0.1,
+            "mix": 0.15,
+            "enabled": True,
+        },
+        "vinyl": {
+            "level": 0.1,
+            "hissLevel": 0.05,
+            "enabled": True,
+        },
+    },
+    "club_dub": {
+        "delay": {
+            "primaryTime": 0.3,
+            "primaryFeedback": 0.35,
+            "primaryMix": 0.4,
+            "secondaryTime": 0.225,
+            "secondaryFeedback": 0.25,
+            "secondaryMix": 0.3,
+            "enabled": True,
+        },
+        "reverb": {
+            "decay": 2.5,
+            "preDelay": 15,
+            "mix": 0.3,
+            "inputFilterFreq": 1200,
+            "inputFilterQ": 1.2,
+            "enabled": True,
+        },
+        "filter": {
+            "type": "bandpass",
+            "frequency": 1000,
+            "Q": 2.5,
+            "lfoRate": 0.3,
+            "lfoDepth": 120,
+            "enabled": True,
+        },
+        "distortion": {
+            "amount": 0.25,
+            "mix": 0.35,
+            "enabled": True,
+        },
+        "vinyl": {
+            "level": 0.12,
+            "hissLevel": 0.08,
+            "enabled": True,
+        },
+    },
+}
 
 
 @dataclass
@@ -19,18 +130,11 @@ class MixConfig:
     effects_preset: str = "deep_dub"
 
 
-EFFECTS_BIN = (
-    Path(__file__).resolve().parent.parent.parent.parent.parent
-    / "effects"
-    / "dist"
-    / "index.js"
-)
-
-
 class MixOrchestrator:
     def __init__(self, config: MixConfig):
         self.config = config
         self.generator = ACEStepGenerator()
+        self.bridge = TypeScriptBridge()
         self.segment_count = math.ceil(config.length / config.segment_duration)
 
     def generate_mix(self) -> Path:
@@ -50,63 +154,41 @@ class MixOrchestrator:
             key=self.config.key,
         )
 
-    def _process_segment(self, segment_path: Path) -> Path:
-        with tempfile.TemporaryDirectory(prefix="openmusic-") as tmpdir:
-            tmpdir_path = Path(tmpdir)
-            input_dir = tmpdir_path / "input"
-            output_dir = tmpdir_path / "output"
-            input_dir.mkdir()
-            output_dir.mkdir()
-
-            shutil.copy2(segment_path, input_dir / "stem_0.wav")
-
-            config = {
-                "sampleRate": 48000,
-                "channels": 2,
-                "duration": self.config.segment_duration,
-                "bpm": self.config.bpm,
-                "key": self.config.key,
-                "inputStems": [{"path": "input/stem_0.wav", "role": "main"}],
-                "outputPath": "output/processed.wav",
-                "effects": {
-                    "filter": {
-                        "type": "lowpass",
-                        "frequency": 800,
-                        "Q": 2.0,
-                    },
-                    "delay": {
-                        "delayTime": 0.375,
-                        "feedback": 0.35,
-                        "wetLevel": 0.4,
-                    },
-                    "reverb": {
-                        "duration": 3.0,
-                        "decay": 2.5,
-                        "wetLevel": 0.3,
-                    },
-                },
-                "pattern": {
-                    "style": "dub_techno",
-                    "variation": 0.3,
-                },
-            }
-
-            config_path = tmpdir_path / "config.json"
-            with open(config_path, "w") as f:
-                json.dump(config, f)
-
-            result = subprocess.run(
-                ["node", str(EFFECTS_BIN), "--config", str(config_path)],
-                capture_output=True,
-                text=True,
+    def _get_effects_config(self) -> dict:
+        preset_name = self.config.effects_preset
+        if preset_name not in _EFFECTS_PRESETS:
+            raise ValueError(
+                f"Unknown effects preset '{preset_name}'. "
+                f"Available: {sorted(_EFFECTS_PRESETS)}"
             )
+        return _EFFECTS_PRESETS[preset_name]
 
-            if result.returncode != 0:
-                raise RuntimeError(
-                    f"Effects processing failed: {result.stderr.strip()}"
-                )
+    def _process_segment(self, segment_path: Path) -> Path:
+        effects = self._get_effects_config()
 
-            return output_dir / "processed.wav"
+        config = {
+            "sampleRate": 48000,
+            "channels": 2,
+            "duration": self.config.segment_duration,
+            "bpm": self.config.bpm,
+            "key": self.config.key,
+            "effects": effects,
+            "pattern": {
+                "style": "dub_techno",
+                "variation": 0.3,
+            },
+        }
+
+        import tempfile
+
+        with tempfile.TemporaryDirectory(prefix="openmusic-out-") as tmpdir:
+            output_path = str(Path(tmpdir) / "processed.wav")
+            self.bridge.call_audio_engine(
+                input_files=[str(segment_path)],
+                output_path=output_path,
+                config=config,
+            )
+            return Path(output_path)
 
     def _get_segment_prompt(self, index: int, total: int) -> str:
         position = index / max(total - 1, 1)

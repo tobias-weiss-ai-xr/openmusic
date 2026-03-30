@@ -4,6 +4,8 @@ from dataclasses import dataclass, field
 from enum import Enum
 from pathlib import Path
 
+from openmusic.arrangement.mixer import MixArranger
+from openmusic.export.encoder import AudioEncoder
 from openmusic.orchestrator.mix import MixConfig, MixOrchestrator
 from openmusic.orchestrator.progress import ProgressReporter
 
@@ -65,9 +67,24 @@ def run_pipeline(config: MixConfig) -> Generator[PipelineResult]:
 
     t2 = time.time()
     output = Path(config.output_path)
-    yield PipelineResult(
-        stage=PipelineStage.EXPORT,
-        duration=time.time() - t2,
-        input_path=None,
-        output_path=output,
-    )
+
+    try:
+        arranger = MixArranger(bpm=config.bpm)
+        arranged_path = arranger.arrange_segments([str(p) for p in segment_paths])
+
+        encoder = AudioEncoder()
+        encoder.encode_flac(arranged_path, output)
+
+        yield PipelineResult(
+            stage=PipelineStage.EXPORT,
+            duration=time.time() - t2,
+            input_path=arranged_path,
+            output_path=output,
+        )
+    except Exception as e:
+        yield PipelineResult(
+            stage=PipelineStage.EXPORT,
+            duration=time.time() - t2,
+            success=False,
+            error=str(e),
+        )

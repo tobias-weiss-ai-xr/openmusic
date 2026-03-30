@@ -1,0 +1,8 @@
+length: 5400
+bpm: 128
+key: Dm
+output_path: "train/mix_output.flac"
+segment_duration: 180
+effects_preset: deep_dub
+format: flac
+style: dub_techno

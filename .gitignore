@@ -7,6 +7,8 @@ __pycache__/
 *.mp3
 .DS_Store
 dist/
+*.egg-info/
 .sisyphus/evidence/
 ACE-Step-1.5/
 poc/
+*.egg-info/

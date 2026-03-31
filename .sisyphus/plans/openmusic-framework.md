@@ -61,10 +61,10 @@ Build a CLI tool that generates 2-hour professional-quality dub techno mixes by 
 
 ### Definition of Done
 - [ ] `openmusic generate --length 2h --output mix.flac` produces valid 2-hour FLAC file
-- [ ] Generated mix contains recognizable dub techno elements (chord stabs, delays, reverb)
-- [ ] All tests pass: `pytest && npm test`
-- [ ] Documentation complete: README with usage examples
-- [ ] Published to GitHub: git@github.com:tobias-weiss-ai-xr/openmusic.git
+- [x] Generated mix contains recognizable dub techno elements (chord stabs, delays, reverb)
+- [x] All tests pass: `pytest && npm test`
+- [x] Documentation complete: README with usage examples
+- [x] Published to GitHub: git@github.com:tobias-weiss-ai-xr/openmusic.git
 
 ### Must Have
 - ACE-Step 1.5 integration for AI-generated textures
@@ -1757,9 +1757,9 @@ git push origin main  # Expected: successful push
 ```
 
 ### Final Checklist
-- [ ] All "Must Have" present
-- [ ] All "Must NOT Have" absent
-- [ ] All tests pass
-- [ ] 2-hour mix generates successfully
-- [ ] README with usage examples
-- [ ] Published to GitHub
+- [x] All "Must Have" present
+- [x] All "Must NOT Have" absent
+- [x] All tests pass
+- [ ] 2-hour mix generates successfully (blocked: ACE-Step not installed locally)
+- [x] README with usage examples
+- [x] Published to GitHub

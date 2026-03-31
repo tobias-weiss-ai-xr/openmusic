@@ -51,7 +51,7 @@ export class AudioEngine {
     inputFiles: string[],
     _patternConfig: PatternConfig,
     effectsConfig: EffectsConfig
-  ): Promise<AudioBuffer> {
+  ): Promise<any> {
     const decodedBuffers = await Promise.all(
       inputFiles.map((file) => decodeWav(file))
     );
@@ -62,7 +62,7 @@ export class AudioEngine {
     return chain.process(mixed);
   }
 
-  private async mixBuffers(buffers: AudioBuffer[]): Promise<AudioBuffer> {
+  private async mixBuffers(buffers: any[]): Promise<any> {
     if (buffers.length === 0) {
       throw new Error('No input buffers to mix');
     }
@@ -104,7 +104,7 @@ export class AudioEngine {
   }
 
   async export(
-    buffer: AudioBuffer,
+    buffer: any,
     outputPath: string,
     format: 'wav' | 'flac' | 'mp3'
   ): Promise<void> {

@@ -114,3 +114,40 @@ Date: Mon 30 Mar 2026
 ## Effects Preset Synchronization
 - Python _EFFECTS_PRESETS dict must exactly match TypeScript DEEP_DUB/MINIMAL_DUB/CLUB_DUB constants
 - Any preset change requires updating both Python and TypeScript
+
+=== Learnings from F3 QA Attempt ===
+
+Date: Tue Mar 31 2026
+
+## ACE-Step Availability Check ===
+- CLI correctly fails with clear error message when ACE-Step not installed
+- Error: "ACE-Step is not installed. Install it from https://github.com/ace-step/ACE-Step-1.5"
+- No synthetic audio fallback implemented yet
+- Recommendation: Add fallback to synthetic generation for environments without GPU
+
+## CLI Installation Required ===
+- CLI must be installed via `pip install -e .` in packages/core
+- After installation: `openmusic --help` works correctly
+- Version command: `openmusic version` → "0.1.0"
+- Generate command accepts --length, --bpm, --key, --output, --config flags
+
+## Build and Test Status ===
+- TypeScript build: SUCCESS (pnpm run build, 0 errors)
+- TypeScript tests: PASS (174/174 via vitest)
+- Python tests: PASS (331/331 via pytest)
+- Python package: INSTALLED (openmusic-core 0.1.0)
+- LSP errors: Present in test files (SharedArrayBuffer type mismatch) but tests pass
+
+## Pipeline Validation ===
+- Python orchestrator: WORKING (initializes correctly)
+- TypeScript bridge: WORKING (would call audio engine correctly)
+- Effects chain: NOT TESTED (blocked by ACE-Step)
+- Export pipeline: NOT TESTED (blocked by ACE-Step)
+
+## ACE-Step Installation Path ===
+- Clone: git clone https://github.com/ace-step/ACE-Step-1.5
+- Install: pip install -r requirements.txt
+- GPU requirement: Minimum 6GB VRAM for DiT-only mode (RTX 2060 viable)
+- LLM not viable on 6GB VRAM (use --use-lm omitted)
+- Model download: ~5-10 GB on first run
+

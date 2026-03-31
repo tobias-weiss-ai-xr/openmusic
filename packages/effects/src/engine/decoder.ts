@@ -8,7 +8,7 @@ export interface AudioInfo {
   bitsPerSample: number;
 }
 
-export async function decodeWav(filePath: string): Promise<AudioBuffer> {
+export async function decodeWav(filePath: string): Promise<any> {
   const fileBuffer = readFileSync(filePath);
   const arrayBuffer = fileBuffer.buffer.slice(
     fileBuffer.byteOffset,

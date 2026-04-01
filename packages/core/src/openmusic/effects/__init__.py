@@ -1,7 +1,8 @@
 """OpenMusic effects module - audio effects for offline processing."""
 
 from .base import Effect
-from .saturation import TapeSaturation
 from .delay import MultiTapDelay
+from .granular_delay import GranularDelay
+from .saturation import TapeSaturation
 
-__all__ = ["Effect", "TapeSaturation", "MultiTapDelay"]
+__all__ = ["Effect", "TapeSaturation", "MultiTapDelay", "GranularDelay"]

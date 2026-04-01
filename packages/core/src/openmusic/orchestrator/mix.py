@@ -1,9 +1,14 @@
 import math
 from dataclasses import dataclass, field
 from pathlib import Path
+from typing import Any, Dict, List, Optional
+
+import numpy as np
+import soundfile as sf
 
 from openmusic.acestep import ACEStepGenerator
 from openmusic.bridge.typescript_bridge import TypeScriptBridge
+from openmusic.effects import MultiTapDelay, TapeSaturation
 
 _EFFECTS_PRESETS: dict[str, dict] = {
     "deep_dub": {
@@ -128,6 +133,7 @@ class MixConfig:
     output_path: str = "mix.flac"
     segment_duration: float = 180.0
     effects_preset: str = "deep_dub"
+    effects_chain: List[Dict[str, Any]] = field(default_factory=list)
 
 
 class MixOrchestrator:
@@ -188,7 +194,62 @@ class MixOrchestrator:
                 output_path=output_path,
                 config=config,
             )
-            return Path(output_path)
+            processed_path = Path(output_path)
+
+            # Apply Python effects chain if configured
+            effects_chain = getattr(self.config, "effects_chain", [])
+            if effects_chain:
+                processed_path = self._apply_effects_chain(
+                    processed_path, effects_chain
+                )
+
+            return processed_path
+
+    def _apply_effects_chain(
+        self, input_path: Path, effects_chain: List[Dict[str, Any]]
+    ) -> Path:
+        """Apply a chain of effects to audio data.
+
+        Args:
+            input_path: Path to input audio file
+            effects_chain: List of effect configuration dicts
+
+        Returns:
+            Path to processed audio file
+        """
+        import tempfile
+
+        # Load audio
+        audio, sample_rate = sf.read(str(input_path))
+
+        # Ensure stereo
+        if len(audio.shape) == 1:
+            audio = np.column_stack([audio, audio])
+
+        # Apply each effect in sequence
+        for effect_config in effects_chain:
+            effect_type = effect_config.get("type")
+            params = effect_config.get("params", {})
+            params["sample_rate"] = sample_rate
+
+            if effect_type == "tape_saturation":
+                effect = TapeSaturation()
+            elif effect_type == "multi_tap_delay":
+                effect = MultiTapDelay()
+            else:
+                continue  # Skip unknown effects
+
+            audio = effect.process(audio, params)
+
+        # Write output to temp file
+        with tempfile.TemporaryDirectory(prefix="openmusic-effects-") as tmpdir:
+            output_path = Path(tmpdir) / "effects_processed.wav"
+            sf.write(str(output_path), audio, sample_rate)
+
+            # Move to final location (overwrite input)
+            output_path.replace(str(input_path))
+
+        return input_path
 
     def _get_segment_prompt(self, index: int, total: int) -> str:
         position = index / max(total - 1, 1)

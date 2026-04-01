@@ -139,6 +139,8 @@ class ConfigParser:
             "output_path": "mix.flac",
             "segment_duration": 180,
             "effects_preset": "deep_dub",
+            # Optional effects chain for offline processing
+            "effects_chain": [],
             # Optional extras used by higher-level tooling / tests
             "format": "flac",
             "style": "dub_techno",

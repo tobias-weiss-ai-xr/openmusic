@@ -8,7 +8,7 @@ import soundfile as sf
 
 from openmusic.acestep import ACEStepGenerator
 from openmusic.bridge.typescript_bridge import TypeScriptBridge
-from openmusic.effects import MultiTapDelay, TapeSaturation
+from openmusic.effects import GranularDelay, MultiTapDelay, TapeSaturation
 
 _EFFECTS_PRESETS: dict[str, dict] = {
     "deep_dub": {
@@ -236,6 +236,8 @@ class MixOrchestrator:
                 effect = TapeSaturation()
             elif effect_type == "multi_tap_delay":
                 effect = MultiTapDelay()
+            elif effect_type == "granular_delay":
+                effect = GranularDelay()
             else:
                 continue  # Skip unknown effects
 

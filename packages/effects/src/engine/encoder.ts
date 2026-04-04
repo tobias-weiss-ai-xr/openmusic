@@ -1,6 +1,7 @@
 import { writeFileSync, mkdirSync } from 'node:fs';
 import { dirname } from 'node:path';
 
+/** Encode an AudioBuffer to WAV format. */
 export async function encodeWav(
   buffer: AudioBuffer,
   outputPath: string

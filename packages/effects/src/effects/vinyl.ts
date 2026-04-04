@@ -36,6 +36,7 @@ function generateHissBuffer(ctx: OfflineAudioContext, duration: number) {
   return buffer;
 }
 
+/** Vinyl noise effect simulating crackle, hiss, and surface noise. */
 export class VinylEffect {
   input: ReturnType<OfflineAudioContext['createGain']>;
   output: ReturnType<OfflineAudioContext['createGain']>;

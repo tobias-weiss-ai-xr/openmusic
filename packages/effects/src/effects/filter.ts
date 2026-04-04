@@ -1,6 +1,7 @@
 import { OfflineAudioContext } from 'web-audio-api';
 import type { FilterConfig } from '../config.js';
 
+/** Bandpass filter effect with LFO modulation for dub techno sweeps. */
 export class FilterEffect {
   input: ReturnType<OfflineAudioContext['createGain']>;
   output: ReturnType<OfflineAudioContext['createGain']>;

@@ -4,6 +4,8 @@ from pathlib import Path
 
 
 class CacheManager:
+    """Manages caching of generated audio segments to avoid recomputation."""
+
     def __init__(self, cache_dir: Path | None = None):
         self.cache_dir = cache_dir or Path.home() / ".cache" / "openmusic" / "acestep"
 

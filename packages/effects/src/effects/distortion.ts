@@ -14,6 +14,7 @@ function makeSoftClipCurve(amount: number): Float32Array {
   return curve;
 }
 
+/** Tape-style saturation effect for warm analog distortion. */
 export class DistortionEffect {
   input: ReturnType<OfflineAudioContext['createGain']>;
   output: ReturnType<OfflineAudioContext['createGain']>;

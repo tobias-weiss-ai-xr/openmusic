@@ -1,6 +1,7 @@
 import { OfflineAudioContext } from 'web-audio-api';
 import type { DelayConfig } from '../config.js';
 
+/** Dub techno delay effect with configurable feedback and tap timing. */
 export class DelayEffect {
   input: ReturnType<OfflineAudioContext['createGain']>;
   output: ReturnType<OfflineAudioContext['createGain']>;

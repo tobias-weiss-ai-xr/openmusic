@@ -8,6 +8,7 @@ import type { EffectsConfig } from './config.js';
 
 type EffectName = 'delay' | 'reverb' | 'filter' | 'distortion' | 'vinyl';
 
+/** Complete dub techno effects chain: filter, distortion, delay, reverb, vinyl. */
 export class DubTechnoEffectsChain {
   private config: EffectsConfig;
   private effects: Map<EffectName, { setParam: (param: string, value: number) => void }>;

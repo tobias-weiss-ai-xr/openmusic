@@ -19,6 +19,7 @@ function generateImpulseResponse(
   return buffer;
 }
 
+/** Reverb effect using convolution with configurable decay and pre-delay. */
 export class ReverbEffect {
   input: ReturnType<OfflineAudioContext['createGain']>;
   output: ReturnType<OfflineAudioContext['createGain']>;

@@ -25,6 +25,7 @@ export interface PatternConfig {
   variation: number;
 }
 
+/** Bridge configuration passed from Python orchestrator. */
 export interface BridgeConfig {
   sampleRate: number;
   channels: number;
@@ -43,6 +44,7 @@ const DEFAULT_ENGINE_CONFIG: EngineConfig = {
   effectsPreset: 'deep_dub',
 };
 
+/** Core audio engine for rendering effects chains offline. */
 export class AudioEngine {
   private config: EngineConfig;
 

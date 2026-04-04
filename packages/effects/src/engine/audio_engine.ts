@@ -6,17 +6,20 @@ import { DEFAULT_EFFECTS_CONFIG, type EffectsConfig } from '../config.js';
 import { decodeWav } from './decoder.js';
 import { encodeWav, encodeFlac, encodeMp3 } from './encoder.js';
 
+/** Configuration for the audio rendering engine. */
 export interface EngineConfig {
   sampleRate: number;
   channels: number;
   effectsPreset: string;
 }
 
+/** Input audio stem with file path and role. */
 export interface InputStem {
   path: string;
   role: string;
 }
 
+/** Pattern generation configuration. */
 export interface PatternConfig {
   style: string;
   variation: number;

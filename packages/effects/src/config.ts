@@ -1,3 +1,4 @@
+/** Delay effect configuration with primary and secondary taps. */
 export interface DelayConfig {
   primaryTime: number;
   primaryFeedback: number;
@@ -8,6 +9,7 @@ export interface DelayConfig {
   enabled: boolean;
 }
 
+/** Reverb effect configuration. */
 export interface ReverbConfig {
   decay: number;
   preDelay: number;
@@ -17,6 +19,7 @@ export interface ReverbConfig {
   enabled: boolean;
 }
 
+/** Filter effect configuration with LFO modulation. */
 export interface FilterConfig {
   type: BiquadFilterType;
   frequency: number;
@@ -26,12 +29,14 @@ export interface FilterConfig {
   enabled: boolean;
 }
 
+/** Distortion effect configuration. */
 export interface DistortionConfig {
   amount: number;
   mix: number;
   enabled: boolean;
 }
 
+/** Vinyl noise effect configuration. */
 export interface VinylConfig {
   level: number;
   hissLevel: number;

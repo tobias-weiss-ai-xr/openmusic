@@ -1,5 +1,6 @@
 import math
-from dataclasses import dataclass, field
+import tempfile
+from dataclasses import dataclass
 from pathlib import Path
 
 from openmusic.acestep import ACEStepGenerator
@@ -178,8 +179,6 @@ class MixOrchestrator:
                 "variation": 0.3,
             },
         }
-
-        import tempfile
 
         with tempfile.TemporaryDirectory(prefix="openmusic-out-") as tmpdir:
             output_path = str(Path(tmpdir) / "processed.wav")

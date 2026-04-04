@@ -5,7 +5,7 @@ from typing import Any, Dict, List
 
 try:
     import yaml  # type: ignore
-except Exception:  # pragma: no cover
+except ImportError:  # pragma: no cover
     yaml = None  # type: ignore
 
 
@@ -71,7 +71,7 @@ class ConfigParser:
                 # Unknown extension: try YAML first, then JSON
                 try:
                     loaded = _load_yaml(path)
-                except Exception:
+                except (ValueError, TypeError, KeyError):
                     loaded = _load_json(path)
         except Exception:
             # If loading fails for any reason, raise to caller

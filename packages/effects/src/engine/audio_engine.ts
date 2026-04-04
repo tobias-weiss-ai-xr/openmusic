@@ -1,5 +1,5 @@
 import { readFileSync } from 'node:fs';
-import { dirname, resolve } from 'node:path';
+import { dirname } from 'node:path';
 import { OfflineAudioContext } from 'web-audio-api';
 import { DubTechnoEffectsChain } from '../chain.js';
 import { DEFAULT_EFFECTS_CONFIG, type EffectsConfig } from '../config.js';

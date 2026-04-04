@@ -7,6 +7,8 @@ from pathlib import Path
 
 
 class BridgeError(Exception):
+    """Error raised when the TypeScript bridge call fails."""
+
     def __init__(self, message: str, stderr: str = ""):
         self.stderr = stderr
         if stderr:
@@ -16,6 +18,8 @@ class BridgeError(Exception):
 
 
 class TypeScriptBridge:
+    """Bridge for calling the TypeScript effects engine from Python via subprocess."""
+
     DEFAULT_TIMEOUT = 600
 
     def __init__(self, effects_bin: str | None = None):

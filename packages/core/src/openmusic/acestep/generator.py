@@ -27,6 +27,8 @@ class GPUInfo:
 
 
 class ACEStepGenerator:
+    """Generates audio textures using the ACE-Step AI model."""
+
     def __init__(self, config: ACEStepConfig | None = None):
         self.config = config or ACEStepConfig()
         self.cache = CacheManager()

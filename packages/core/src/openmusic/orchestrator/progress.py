@@ -4,6 +4,8 @@ import time
 
 
 class ProgressReporter:
+    """Tracks and reports progress of mix generation segments."""
+
     def __init__(self, total: int = 0):
         self.total = total
         self.current = 0

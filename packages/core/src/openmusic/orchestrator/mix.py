@@ -123,6 +123,8 @@ _EFFECTS_PRESETS: dict[str, dict] = {
 
 @dataclass
 class MixConfig:
+    """Configuration for a dub techno mix generation session."""
+
     length: float = 7200.0
     bpm: int = 125
     key: str = "Dm"
@@ -132,6 +134,8 @@ class MixConfig:
 
 
 class MixOrchestrator:
+    """Orchestrates AI texture generation and effects processing into a complete mix."""
+
     def __init__(self, config: MixConfig):
         self.config = config
         self.generator = ACEStepGenerator()

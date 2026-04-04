@@ -8,10 +8,14 @@ from openmusic.export.metadata import TrackMetadata, embed_metadata
 
 
 class EncoderNotFoundError(Exception):
+    """Raised when ffmpeg encoder is not found on the system."""
+
     pass
 
 
 class EncodingError(Exception):
+    """Raised when audio encoding fails."""
+
     def __init__(self, message: str, stderr: str = ""):
         self.stderr = stderr
         if stderr:
@@ -22,6 +26,8 @@ class EncodingError(Exception):
 
 @dataclass
 class AudioInfo:
+    """Metadata about an audio file's format and properties."""
+
     format: str
     duration: float
     sample_rate: int
@@ -30,6 +36,8 @@ class AudioInfo:
 
 
 class AudioEncoder:
+    """Encodes audio files to FLAC and MP3 using ffmpeg."""
+
     def __init__(
         self,
         ffmpeg_path: str | None = None,

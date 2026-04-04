@@ -9,6 +9,7 @@ def generate_crossfade_curve(
     duration_samples: int,
     curve_type: str,
 ) -> tuple[np.ndarray, np.ndarray]:
+    """Generate a crossfade curve of the specified type and length."""
     if curve_type not in VALID_CURVE_TYPES:
         raise ValueError(
             f"Invalid curve_type '{curve_type}'. Must be one of: {sorted(VALID_CURVE_TYPES)}"
@@ -38,6 +39,7 @@ def crossfade_numpy(
     sample_rate: int,
     curve_type: str = "equal_power",
 ) -> np.ndarray:
+    """Apply crossfade between two audio arrays using the specified curve."""
     fade_samples = int(fade_duration * sample_rate)
 
     if audio_a.shape[0] != audio_b.shape[0]:

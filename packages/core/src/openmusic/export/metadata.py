@@ -6,6 +6,8 @@ from pathlib import Path
 
 @dataclass
 class TrackMetadata:
+    """Metadata for an audio track."""
+
     title: str | None = None
     artist: str | None = None
     album: str | None = None
@@ -16,6 +18,8 @@ class TrackMetadata:
 
 
 class EmbeddingError(Exception):
+    """Raised when metadata embedding fails."""
+
     def __init__(self, message: str, stderr: str = ""):
         self.stderr = stderr
         if stderr:

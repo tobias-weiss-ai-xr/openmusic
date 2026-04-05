@@ -17,6 +17,8 @@ jobs:
           node-version: '20'
       - name: Install dependencies
         run: pnpm install
+      - name: Build packages
+        run: pnpm build
       - name: Run TypeScript tests
         run: pnpm test
   python:

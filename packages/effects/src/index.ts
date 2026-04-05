@@ -10,6 +10,7 @@ export {
   DistortionEffect,
   VinylEffect,
   TapeSaturationEffect,
+  MultiTapDelayEffect,
 } from './effects/index.js';
 
 export type {
@@ -20,6 +21,7 @@ export type {
   DistortionConfig,
   VinylConfig,
   TapeSaturationConfig,
+  MultiTapDelayConfig,
 } from './config.js';
 
 export { DEEP_DUB, MINIMAL_DUB, CLUB_DUB, DEFAULT_EFFECTS_CONFIG } from './config.js';

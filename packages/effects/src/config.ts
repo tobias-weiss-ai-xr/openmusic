@@ -54,6 +54,19 @@ export interface TapeSaturationConfig {
   enabled: boolean;
 }
 
+/** Multi-tap delay effect configuration. */
+export interface MultiTapDelayConfig {
+  taps: Array<{
+    time: number;
+    feedback: number;
+    pan: number;
+    gain: number;
+  }>;
+  masterFeedback: number;
+  wetDryMix: number;
+  enabled: boolean;
+}
+
 export interface EffectsConfig {
   delay: DelayConfig;
   reverb: ReverbConfig;

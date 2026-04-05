@@ -51,6 +51,7 @@ export interface EffectsConfig {
   vinyl: VinylConfig;
 }
 
+/** Deep, atmospheric dub techno preset with long delays and reverb. */
 export const DEEP_DUB: EffectsConfig = {
   delay: {
     primaryTime: 0.375,     // dotted 1/8 at 125 BPM
@@ -89,6 +90,7 @@ export const DEEP_DUB: EffectsConfig = {
   },
 };
 
+/** Minimal dub techno preset with subtle effects. */
 export const MINIMAL_DUB: EffectsConfig = {
   delay: {
     primaryTime: 0.375,
@@ -127,6 +129,7 @@ export const MINIMAL_DUB: EffectsConfig = {
   },
 };
 
+/** Club-optimized dub techno preset with punchier sound. */
 export const CLUB_DUB: EffectsConfig = {
   delay: {
     primaryTime: 0.3,

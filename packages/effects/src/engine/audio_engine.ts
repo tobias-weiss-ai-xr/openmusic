@@ -52,6 +52,13 @@ export class AudioEngine {
     this.config = { ...DEFAULT_ENGINE_CONFIG, ...config };
   }
 
+  /**
+   * Renders audio through the effects chain.
+   * @param inputFiles - Array of input WAV file paths
+   * @param _patternConfig - Pattern configuration (unused, reserved for future use)
+   * @param effectsConfig - Effects chain configuration
+   * @returns Processed AudioBuffer
+   */
   async render(
     inputFiles: string[],
     _patternConfig: PatternConfig,
@@ -108,6 +115,12 @@ export class AudioEngine {
     return output;
   }
 
+  /**
+   * Exports an AudioBuffer to a file in the specified format.
+   * @param buffer - The AudioBuffer to export
+   * @param outputPath - Output file path
+   * @param format - Output format ('wav', 'flac', 'mp3')
+   */
   async export(
     buffer: any,
     outputPath: string,
@@ -128,6 +141,11 @@ export class AudioEngine {
     }
   }
 
+  /**
+   * Creates an AudioEngine from a bridge config file.
+   * @param configPath - Path to JSON config file
+   * @returns Configured AudioEngine instance
+   */
   static fromBridgeConfig(configPath: string): AudioEngine {
     const raw = readFileSync(configPath, 'utf-8');
     const config: BridgeConfig = JSON.parse(raw);

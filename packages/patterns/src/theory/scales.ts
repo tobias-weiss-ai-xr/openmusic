@@ -15,6 +15,7 @@ const SCALE_INTERVALS: Record<ScaleType, number[]> = {
   'dorian':         [0, 2, 3, 5, 7, 9, 10],
 }
 
+/** Converts a note name to its chromatic index (0-11). */
 export function noteToIndex(note: string): number {
   if (note.length === 2 && note[1] === '#') {
     const idx = CHROMATIC.indexOf(note as typeof CHROMATIC[number])
@@ -29,12 +30,13 @@ export function noteToIndex(note: string): number {
   throw new Error(`Unknown note: ${note}`)
 }
 
+/** Converts a chromatic index (0-11) to a note name. */
 export function indexToNote(index: number): string {
   return CHROMATIC[((index % 12) + 12) % 12]
 }
 
 /**
- * Derive a note name from a root key, scale degree, and chromatic target.
+ * Derives a note name from a root key, scale degree, and chromatic target.
  * Uses music theory convention: each degree gets a letter name (cycling C-D-E-F-G-A-B),
  * and the accidental is computed from the difference between the target chromatic index
  * and the natural position of that letter.
@@ -57,6 +59,12 @@ export function degreeNoteName(root: string, degree: number, chromaticOffset: nu
   return indexToNote(targetIdx)
 }
 
+/**
+ * Returns an array of note names forming the specified scale.
+ * @param key - Root note (e.g., 'C', 'Am')
+ * @param scaleType - Type of scale
+ * @returns Array of note names in the scale
+ */
 export function getScale(key: string, scaleType: ScaleType): string[] {
   return SCALE_INTERVALS[scaleType].map((semitones, degree) =>
     degreeNoteName(key, degree, semitones),
@@ -78,6 +86,12 @@ const CHORD_SEMITONE_TO_DEGREE: Record<number, number> = {
   0: 0, 3: 2, 7: 4, 10: 6, 14: 1, 17: 3,
 }
 
+/**
+ * Returns chord tones for a root note and quality.
+ * @param root - Root note of the chord
+ * @param quality - Chord quality (m, m7, m9, m11)
+ * @returns Array of note names in the chord
+ */
 export function getChordTones(root: string, quality: ChordQuality): string[] {
   return CHORD_INTERVALS[quality].map(semitones => {
     const degree = CHORD_SEMITONE_TO_DEGREE[semitones] ?? Math.round(semitones * 7 / 12)

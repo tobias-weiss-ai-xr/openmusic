@@ -15,6 +15,11 @@ export interface MiniNotationGroup {
 
 export type MiniNotationElement = MiniNotationNote | MiniNotationRest | MiniNotationGroup
 
+/**
+ * Parses a single token into a note or rest.
+ * @param token - Token string ('.' for rest, note name otherwise)
+ * @returns MiniNotationNote or MiniNotationRest
+ */
 export function parseNote(token: string): MiniNotationNote | MiniNotationRest {
   if (token === '.') {
     return { type: 'rest', value: '.' }
@@ -22,6 +27,11 @@ export function parseNote(token: string): MiniNotationNote | MiniNotationRest {
   return { type: 'note', value: token }
 }
 
+/**
+ * Parses a bracketed group of elements (e.g., '[c,e,g]').
+ * @param input - String with brackets (e.g., '[c,e,g]')
+ * @returns MiniNotationGroup with parsed elements
+ */
 export function parseGroup(input: string): MiniNotationGroup {
   const inner = input.slice(1, -1)
   const elements: (MiniNotationNote | MiniNotationRest)[] = []
@@ -35,6 +45,12 @@ export function parseGroup(input: string): MiniNotationGroup {
   return { type: 'group', elements }
 }
 
+/**
+ * Parses a mini-notation string into an array of elements.
+ * Supports: notes ('c', 'd#'), rests ('.'), and groups ('[c,e,g]').
+ * @param input - Mini-notation string (e.g., 'c d . e [f,a]')
+ * @returns Array of parsed MiniNotationElement
+ */
 export function parseMiniNotation(input: string): MiniNotationElement[] {
   const trimmed = input.trim()
   if (trimmed === '') return []

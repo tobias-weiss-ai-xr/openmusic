@@ -67,7 +67,16 @@ function padRhythm(): number[] {
   return [1, 0, 0, 0]
 }
 
+/**
+ * Generates dub techno patterns for all instrument tracks.
+ */
 export class DubTechnoPatterns {
+  /**
+   * Generates a chord stab pattern for the given chord.
+   * @param chord - Chord name (e.g., 'Am', 'Dm7')
+   * @param options - Pattern options (bpm, rate, velocity, duration)
+   * @returns Pattern object with timing and notes
+   */
   static chordStab(chord: string, options: PatternOptions = {}): Pattern {
     const { root, quality } = parseChordName(chord)
     const notes = getChordTones(root, quality)
@@ -87,6 +96,12 @@ export class DubTechnoPatterns {
     }
   }
 
+  /**
+   * Generates a bass pulse pattern for the given root note.
+   * @param root - Root note (e.g., 'C', 'A')
+   * @param options - Pattern options (bpm, rate, velocity, duration)
+   * @returns Pattern object with timing and notes
+   */
   static bassPulse(root: string, options: PatternOptions = {}): Pattern {
     const bpm = options.bpm ?? DEFAULT_BPM
     const subdivision = options.rate ?? '1/4'
@@ -104,6 +119,11 @@ export class DubTechnoPatterns {
     }
   }
 
+  /**
+   * Generates a hi-hat pattern.
+   * @param options - Pattern options (bpm, velocity, duration)
+   * @returns Pattern object with timing and notes
+   */
   static hiHatPattern(options: PatternOptions = {}): Pattern {
     const bpm = options.bpm ?? DEFAULT_BPM
 
@@ -120,6 +140,12 @@ export class DubTechnoPatterns {
     }
   }
 
+  /**
+   * Generates a pad texture pattern for the given chord.
+   * @param chord - Chord name (e.g., 'Am', 'Dm7')
+   * @param options - Pattern options (bpm, velocity, duration)
+   * @returns Pattern object with timing and notes
+   */
   static padTexture(chord: string, options: PatternOptions = {}): Pattern {
     const { root, quality } = parseChordName(chord)
     const notes = getChordTones(root, quality)
@@ -138,6 +164,13 @@ export class DubTechnoPatterns {
     }
   }
 
+  /**
+   * Generates a complete dub techno pattern with all tracks.
+   * @param key - Musical key (e.g., 'Am')
+   * @param bpm - Tempo in beats per minute
+   * @param options - Pattern options for all tracks
+   * @returns FullPattern object with all instrument tracks
+   */
   static fullPattern(key: string, bpm: number, options: PatternOptions = {}): FullPattern {
     const chordName = key + 'm9'
 

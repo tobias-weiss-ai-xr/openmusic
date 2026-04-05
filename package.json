@@ -5,14 +5,24 @@
   "type": "module",
   "scripts": {
     "test": "vitest run",
-    "build": "pnpm -r build"
+    "build": "pnpm -r build",
+    "docs": "typedoc"
   },
   "devDependencies": {
     "@types/node": "^25.5.0",
     "typescript": "^5.0.0",
-    "vitest": "^4.1.2"
+    "vitest": "^4.1.2",
+    "typedoc": "^0.27.0"
   },
   "dependencies": {
     "web-audio-api": "^1.2.0"
+  },
+  "typedoc": {
+    "entryPoints": [
+      "packages/effects/src/index.ts",
+      "packages/patterns/src/index.ts",
+      "packages/cli/src/index.ts"
+    ],
+    "out": "docs"
   }
 }

@@ -10,5 +10,9 @@
   },
   "devDependencies": {
     "vitest": "^4.1.2"
+  },
+  "dependencies": {
+    "@openmusic/effects": "workspace:*",
+    "@openmusic/patterns": "workspace:*"
   }
 }

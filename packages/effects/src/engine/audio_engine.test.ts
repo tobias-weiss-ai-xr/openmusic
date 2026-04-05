@@ -201,14 +201,14 @@ describe('AudioEngine', () => {
       expect(decoded.length).toBe(48000);
     });
 
-    test('throws for unsupported format', async () => {
+    test('exports buffer as FLAC file', async () => {
       const engine = new AudioEngine();
       const ctx = new OfflineAudioContext(2, 48000, 48000);
       const buf = ctx.createBuffer(2, 48000, 48000);
 
-      await expect(
-        engine.export(buf, join(TEST_DIR, 'test.flac'), 'flac')
-      ).rejects.toThrow();
+      await engine.export(buf, join(TEST_DIR, 'export_test.flac'), 'flac');
+
+      expect(existsSync(join(TEST_DIR, 'export_test.flac'))).toBe(true);
     });
   });
 

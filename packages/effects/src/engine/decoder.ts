@@ -9,7 +9,7 @@ export interface AudioInfo {
   bitsPerSample: number;
 }
 
-/** Decode a WAV file into an AudioBuffer. */
+/** Decodes a WAV file into an AudioBuffer. */
 export async function decodeWav(filePath: string): Promise<any> {
   const fileBuffer = readFileSync(filePath);
   const arrayBuffer = fileBuffer.buffer.slice(

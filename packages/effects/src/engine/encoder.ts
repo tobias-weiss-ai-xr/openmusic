@@ -1,7 +1,8 @@
 import { writeFileSync, mkdirSync } from 'node:fs';
 import { dirname } from 'node:path';
+import { execSync } from 'node:child_process';
 
-/** Encode an AudioBuffer to WAV format. */
+/** Encodes an AudioBuffer to WAV format. */
 export async function encodeWav(
   buffer: AudioBuffer,
   outputPath: string
@@ -48,16 +49,42 @@ export async function encodeWav(
   writeFileSync(outputPath, wav);
 }
 
+/**
+ * Encodes an AudioBuffer to FLAC format via ffmpeg.
+ * @param buffer - The AudioBuffer to encode
+ * @param outputPath - Output file path (.flac)
+ */
 export async function encodeFlac(
-  _buffer: AudioBuffer,
-  _outputPath: string
+  buffer: AudioBuffer,
+  outputPath: string
 ): Promise<void> {
-  throw new Error('FLAC encoding is not yet implemented. Use ffmpeg for FLAC conversion.');
+  const tempWav = outputPath.replace(/\.flac$/i, '_temp.wav');
+  await encodeWav(buffer, tempWav);
+  
+  try {
+    execSync(`ffmpeg -i "${tempWav}" -y -codec flac "${outputPath}"`, { stdio: 'pipe' });
+  } finally {
+    const { unlinkSync } = await import('node:fs');
+    try { unlinkSync(tempWav); } catch {}
+  }
 }
 
+/**
+ * Encodes an AudioBuffer to MP3 format via ffmpeg.
+ * @param buffer - The AudioBuffer to encode
+ * @param outputPath - Output file path (.mp3)
+ */
 export async function encodeMp3(
-  _buffer: AudioBuffer,
-  _outputPath: string
+  buffer: AudioBuffer,
+  outputPath: string
 ): Promise<void> {
-  throw new Error('MP3 encoding is not yet implemented. Use ffmpeg for MP3 conversion.');
+  const tempWav = outputPath.replace(/\.mp3$/i, '_temp.wav');
+  await encodeWav(buffer, tempWav);
+  
+  try {
+    execSync(`ffmpeg -i "${tempWav}" -y -codec libmp3lame -q:a 2 "${outputPath}"`, { stdio: 'pipe' });
+  } finally {
+    const { unlinkSync } = await import('node:fs');
+    try { unlinkSync(tempWav); } catch {}
+  }
 }

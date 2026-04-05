@@ -87,19 +87,23 @@ describe('encodeWav', () => {
 });
 
 describe('encodeFlac', () => {
-  test('throws not implemented error', async () => {
+  test('encodes to FLAC via ffmpeg', async () => {
     const filePath = join(TEST_DIR, 'output.flac');
     const buffer = makeBuffer();
 
-    await expect(encodeFlac(buffer, filePath)).rejects.toThrow('FLAC encoding is not yet implemented');
+    await encodeFlac(buffer, filePath);
+
+    expect(existsSync(filePath)).toBe(true);
   });
 });
 
 describe('encodeMp3', () => {
-  test('throws not implemented error', async () => {
+  test('encodes to MP3 via ffmpeg', async () => {
     const filePath = join(TEST_DIR, 'output.mp3');
     const buffer = makeBuffer();
 
-    await expect(encodeMp3(buffer, filePath)).rejects.toThrow('MP3 encoding is not yet implemented');
+    await encodeMp3(buffer, filePath);
+
+    expect(existsSync(filePath)).toBe(true);
   });
 });

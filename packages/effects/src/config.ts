@@ -43,18 +43,30 @@ export interface VinylConfig {
   enabled: boolean;
 }
 
+/** Tape saturation effect configuration. */
+export interface TapeSaturationConfig {
+  drive: number;
+  wetDryMix: number;
+  biasTone: {
+    frequency: number;
+    amplitude: number;
+  } | null;
+  enabled: boolean;
+}
+
 export interface EffectsConfig {
   delay: DelayConfig;
   reverb: ReverbConfig;
   filter: FilterConfig;
   distortion: DistortionConfig;
   vinyl: VinylConfig;
+  tapeSaturation: TapeSaturationConfig;
 }
 
 /** Deep, atmospheric dub techno preset with long delays and reverb. */
 export const DEEP_DUB: EffectsConfig = {
   delay: {
-    primaryTime: 0.375,     // dotted 1/8 at 125 BPM
+    primaryTime: 0.375, // dotted 1/8 at 125 BPM
     primaryFeedback: 0.5,
     primaryMix: 0.6,
     secondaryTime: 0.28125, // 3/16 at 125 BPM
@@ -86,6 +98,12 @@ export const DEEP_DUB: EffectsConfig = {
   vinyl: {
     level: 0.25,
     hissLevel: 0.15,
+    enabled: true,
+  },
+  tapeSaturation: {
+    drive: 30,
+    wetDryMix: 40,
+    biasTone: { frequency: 50, amplitude: 0.01 },
     enabled: true,
   },
 };
@@ -127,6 +145,12 @@ export const MINIMAL_DUB: EffectsConfig = {
     hissLevel: 0.05,
     enabled: true,
   },
+  tapeSaturation: {
+    drive: 15,
+    wetDryMix: 20,
+    biasTone: null,
+    enabled: true,
+  },
 };
 
 /** Club-optimized dub techno preset with punchier sound. */
@@ -164,6 +188,12 @@ export const CLUB_DUB: EffectsConfig = {
   vinyl: {
     level: 0.12,
     hissLevel: 0.08,
+    enabled: true,
+  },
+  tapeSaturation: {
+    drive: 40,
+    wetDryMix: 50,
+    biasTone: { frequency: 60, amplitude: 0.015 },
     enabled: true,
   },
 };

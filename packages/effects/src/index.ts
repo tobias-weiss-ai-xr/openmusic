@@ -9,6 +9,7 @@ export {
   FilterEffect,
   DistortionEffect,
   VinylEffect,
+  TapeSaturationEffect,
 } from './effects/index.js';
 
 export type {
@@ -18,14 +19,10 @@ export type {
   FilterConfig,
   DistortionConfig,
   VinylConfig,
+  TapeSaturationConfig,
 } from './config.js';
 
-export {
-  DEEP_DUB,
-  MINIMAL_DUB,
-  CLUB_DUB,
-  DEFAULT_EFFECTS_CONFIG,
-} from './config.js';
+export { DEEP_DUB, MINIMAL_DUB, CLUB_DUB, DEFAULT_EFFECTS_CONFIG } from './config.js';
 
 export {
   AudioEngine,
@@ -45,10 +42,7 @@ export type {
 } from './engine/index.js';
 
 function isDirectExecution(): boolean {
-  return (
-    process.argv[1]?.endsWith('index.js') ||
-    process.argv[1]?.endsWith('index')
-  );
+  return process.argv[1]?.endsWith('index.js') || process.argv[1]?.endsWith('index');
 }
 
 if (isDirectExecution()) {
@@ -83,23 +77,17 @@ if (isDirectExecution()) {
       channels: config.channels,
     });
 
-    const inputFiles = config.inputStems.map(
-      (stem: { path: string }) => join(configDir, stem.path)
+    const inputFiles = config.inputStems.map((stem: { path: string }) =>
+      join(configDir, stem.path)
     );
     const outputPath = join(configDir, config.outputPath);
 
-    const buffer = await engine.render(
-      inputFiles,
-      config.pattern,
-      config.effects
-    );
+    const buffer = await engine.render(inputFiles, config.pattern, config.effects);
     await engine.export(buffer, outputPath, 'wav');
 
     process.exit(0);
   } catch (err) {
-    process.stderr.write(
-      `Error: ${err instanceof Error ? err.message : String(err)}\n`
-    );
+    process.stderr.write(`Error: ${err instanceof Error ? err.message : String(err)}\n`);
     process.exit(1);
   }
 }

@@ -67,6 +67,16 @@ export interface MultiTapDelayConfig {
   enabled: boolean;
 }
 
+/** Granular delay effect configuration. */
+export interface GranularDelayConfig {
+  grainSizeMs: number;
+  grainDensity: number;
+  randomizationAmount: number;
+  feedback: number;
+  wetDryMix: number;
+  enabled: boolean;
+}
+
 export interface EffectsConfig {
   delay: DelayConfig;
   reverb: ReverbConfig;
@@ -74,15 +84,17 @@ export interface EffectsConfig {
   distortion: DistortionConfig;
   vinyl: VinylConfig;
   tapeSaturation: TapeSaturationConfig;
+  multiTapDelay: MultiTapDelayConfig;
+  granularDelay: GranularDelayConfig;
 }
 
 /** Deep, atmospheric dub techno preset with long delays and reverb. */
 export const DEEP_DUB: EffectsConfig = {
   delay: {
-    primaryTime: 0.375, // dotted 1/8 at 125 BPM
+    primaryTime: 0.375,
     primaryFeedback: 0.5,
     primaryMix: 0.6,
-    secondaryTime: 0.28125, // 3/16 at 125 BPM
+    secondaryTime: 0.28125,
     secondaryFeedback: 0.4,
     secondaryMix: 0.5,
     enabled: true,
@@ -118,6 +130,24 @@ export const DEEP_DUB: EffectsConfig = {
     wetDryMix: 40,
     biasTone: { frequency: 50, amplitude: 0.01 },
     enabled: true,
+  },
+  multiTapDelay: {
+    taps: [
+      { time: 0.25, feedback: 0.4, pan: -0.3, gain: 0.5 },
+      { time: 0.5, feedback: 0.3, pan: 0.3, gain: 0.4 },
+      { time: 0.75, feedback: 0.2, pan: 0, gain: 0.3 },
+    ],
+    masterFeedback: 0.5,
+    wetDryMix: 0.5,
+    enabled: true,
+  },
+  granularDelay: {
+    grainSizeMs: 50,
+    grainDensity: 5,
+    randomizationAmount: 30,
+    feedback: 40,
+    wetDryMix: 60,
+    enabled: false,
   },
 };
 
@@ -164,6 +194,20 @@ export const MINIMAL_DUB: EffectsConfig = {
     biasTone: null,
     enabled: true,
   },
+  multiTapDelay: {
+    taps: [{ time: 0.5, feedback: 0.2, pan: 0, gain: 0.3 }],
+    masterFeedback: 0.3,
+    wetDryMix: 0.25,
+    enabled: true,
+  },
+  granularDelay: {
+    grainSizeMs: 50,
+    grainDensity: 3,
+    randomizationAmount: 20,
+    feedback: 20,
+    wetDryMix: 30,
+    enabled: false,
+  },
 };
 
 /** Club-optimized dub techno preset with punchier sound. */
@@ -208,6 +252,24 @@ export const CLUB_DUB: EffectsConfig = {
     wetDryMix: 50,
     biasTone: { frequency: 60, amplitude: 0.015 },
     enabled: true,
+  },
+  multiTapDelay: {
+    taps: [
+      { time: 0.2, feedback: 0.3, pan: -0.2, gain: 0.4 },
+      { time: 0.4, feedback: 0.25, pan: 0.2, gain: 0.35 },
+      { time: 0.6, feedback: 0.2, pan: 0, gain: 0.25 },
+    ],
+    masterFeedback: 0.4,
+    wetDryMix: 0.4,
+    enabled: true,
+  },
+  granularDelay: {
+    grainSizeMs: 40,
+    grainDensity: 6,
+    randomizationAmount: 25,
+    feedback: 35,
+    wetDryMix: 50,
+    enabled: false,
   },
 };
 

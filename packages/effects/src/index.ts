@@ -11,6 +11,7 @@ export {
   VinylEffect,
   TapeSaturationEffect,
   MultiTapDelayEffect,
+  GranularDelayEffect,
 } from './effects/index.js';
 
 export type {
@@ -22,6 +23,7 @@ export type {
   VinylConfig,
   TapeSaturationConfig,
   MultiTapDelayConfig,
+  GranularDelayConfig,
 } from './config.js';
 
 export { DEEP_DUB, MINIMAL_DUB, CLUB_DUB, DEFAULT_EFFECTS_CONFIG } from './config.js';

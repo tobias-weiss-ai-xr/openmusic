@@ -5,6 +5,7 @@ from .compression import SidechainCompression
 from .delay import MultiTapDelay
 from .granular_delay import GranularDelay
 from .saturation import TapeSaturation
+from .stereo import MidSideStereoWidener
 
 __all__ = [
     "Effect",
@@ -12,4 +13,5 @@ __all__ = [
     "MultiTapDelay",
     "GranularDelay",
     "SidechainCompression",
+    "MidSideStereoWidener",
 ]

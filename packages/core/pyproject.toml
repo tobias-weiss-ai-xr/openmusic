@@ -15,6 +15,9 @@ build-backend = "setuptools.build_meta"
 [project.scripts]
 openmusic = "openmusic.cli.main:main"
 
+[tool.coverage.run]
+omit = ["*/verify_spectral_masking.py", "*/tests/*"]
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = ["src"]

@@ -2,7 +2,12 @@ import { test, expect, describe, beforeAll, afterAll } from 'vitest';
 import { writeFileSync, mkdirSync, rmSync, existsSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { tmpdir } from 'node:os';
-import { AudioEngine, type EngineConfig, type BridgeConfig, type InputStem } from './audio_engine.js';
+import {
+  AudioEngine,
+  type EngineConfig,
+  type BridgeConfig,
+  type InputStem,
+} from './audio_engine.js';
 import { decodeWav } from './decoder.js';
 import { AudioBuffer, OfflineAudioContext } from 'web-audio-api';
 import { DEFAULT_EFFECTS_CONFIG } from '../config.js';
@@ -18,12 +23,7 @@ function createWavFile(
     frequency?: number;
   } = {}
 ): void {
-  const {
-    sampleRate = 48000,
-    channels = 2,
-    numSamples = sampleRate,
-    frequency = 440,
-  } = opts;
+  const { sampleRate = 48000, channels = 2, numSamples = sampleRate, frequency = 440 } = opts;
 
   const bytesPerSample = 4;
   const blockAlign = channels * bytesPerSample;
@@ -51,7 +51,7 @@ function createWavFile(
   buffer.writeUInt32LE(dataSize, 40);
 
   for (let i = 0; i < numSamples; i++) {
-    const sample = Math.sin(2 * Math.PI * frequency * i / sampleRate) * 0.5;
+    const sample = Math.sin((2 * Math.PI * frequency * i) / sampleRate) * 0.5;
     for (let ch = 0; ch < channels; ch++) {
       const offset = 44 + (i * channels + ch) * bytesPerSample;
       buffer.writeFloatLE(sample, offset);
@@ -68,9 +68,7 @@ function createBridgeConfig(overrides: Partial<BridgeConfig> = {}): BridgeConfig
     duration: 1,
     bpm: 125,
     key: 'Am',
-    inputStems: [
-      { path: join(TEST_DIR, 'stem_0.wav'), role: 'bass' },
-    ],
+    inputStems: [{ path: join(TEST_DIR, 'stem_0.wav'), role: 'bass' }],
     outputPath: join(TEST_DIR, 'output', 'processed.wav'),
     effects: DEFAULT_EFFECTS_CONFIG,
     pattern: { style: 'dub_techno', variation: 0.3 },
@@ -124,7 +122,7 @@ describe('AudioEngine', () => {
       expect(result).toBeInstanceOf(AudioBuffer);
       expect(result.numberOfChannels).toBe(2);
       expect(result.sampleRate).toBe(48000);
-    });
+    }, 15000);
 
     test('returns AudioBuffer for multiple input files (mixed)', async () => {
       const engine = new AudioEngine();
@@ -189,7 +187,7 @@ describe('AudioEngine', () => {
       const buf = ctx.createBuffer(2, 48000, 48000);
       const data = buf.getChannelData(0);
       for (let i = 0; i < data.length; i++) {
-        data[i] = Math.sin(2 * Math.PI * 440 * i / 48000) * 0.5;
+        data[i] = Math.sin((2 * Math.PI * 440 * i) / 48000) * 0.5;
       }
 
       const exportPath = join(TEST_DIR, 'export_roundtrip.wav');

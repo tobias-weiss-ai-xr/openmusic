@@ -6,12 +6,13 @@ from .delay import MultiTapDelay
 from .granular_delay import GranularDelay
 from .saturation import TapeSaturation
 from .stereo import MidSideStereoWidener
+from .lfo import LFOModulationEngine
 
 __all__ = [
-    "Effect",
     "TapeSaturation",
     "MultiTapDelay",
     "GranularDelay",
     "SidechainCompression",
     "MidSideStereoWidener",
+    "LFOModulationEngine",
 ]

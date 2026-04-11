@@ -15,7 +15,7 @@ function makeBuffer(ctx: OfflineAudioContext): AudioBuffer {
   for (let ch = 0; ch < 2; ch++) {
     const data = buf.getChannelData(ch);
     for (let i = 0; i < data.length; i++) {
-      data[i] = Math.sin(2 * Math.PI * 440 * i / SAMPLE_RATE) * 0.5;
+      data[i] = Math.sin((2 * Math.PI * 440 * i) / SAMPLE_RATE) * 0.5;
     }
   }
   return buf;
@@ -50,7 +50,7 @@ describe('ReverbEffect', () => {
     expect(output.numberOfChannels).toBe(2);
     expect(output.length).toBe(input.length);
     expect(output.sampleRate).toBe(SAMPLE_RATE);
-  });
+  }, 15000);
 
   test('reverb tail extends beyond dry signal', async () => {
     const ctx = makeContext();

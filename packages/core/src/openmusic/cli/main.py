@@ -389,7 +389,7 @@ def publish(
         )
         orchestrator = MixOrchestrator(mix_config)
         mix_path = orchestrator.generate_mix()
-        click.echo(f"✓ Mix generated: {mix_path}")
+        click.echo(f"[OK] Mix generated: {mix_path}")
     except Exception as e:
         raise click.ClickException(f"Mix generation failed: {e}")
 
@@ -559,7 +559,7 @@ def publish(
                 cmd, check=True, capture_output=True, text=True, timeout=3600
             )
 
-        click.echo(f"✓ MP4 rendered: {mp4_path}")
+        click.echo(f"[OK] MP4 rendered: {mp4_path}")
     except subprocess.TimeoutExpired:
         raise click.ClickException("ffmpeg timed out after 1 hour")
     except subprocess.CalledProcessError as e:
@@ -584,11 +584,11 @@ def publish(
         )
         uploader = YouTubeUploader(upload_config)
         video_id = uploader.upload(mp4_path)
-        click.echo(f"✓ Upload successful!")
+        click.echo(f"[OK] Upload successful!")
         click.echo(f"  Video ID: {video_id}")
         click.echo(f"  URL: https://youtube.com/watch?v={video_id}")
     except YouTubeUploadError as e:
-        click.echo(f"✗ YouTube upload failed: {e}")
+        click.echo(f"[!] YouTube upload failed: {e}")
         click.echo(f"\nMP4 file saved at: {mp4_path}")
         click.echo("You can upload it manually to YouTube.")
         return 1
@@ -620,7 +620,7 @@ def publish(
                 except Exception as e:
                     click.echo(f"  Failed to delete {f}: {e}")
 
-    click.echo("\n✓ Publish complete!")
+    click.echo("\n[OK] Publish complete!")
 
 
 @click.version_option(version="0.1.0")

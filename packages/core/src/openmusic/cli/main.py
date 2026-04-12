@@ -222,17 +222,17 @@ def version():
 )
 @click.option(
     "--client-secrets",
-    type=click.Path(exists=True, dir_okay=False),
+    type=click.Path(dir_okay=False),
     required=False,
-    default="client_secrets.json",
-    help="Path to OAuth client_secrets.json",
+    default=None,
+    help="Path to OAuth client_secrets.json (for YouTube API upload)",
 )
 @click.option(
     "--cookies",
-    type=click.Path(exists=True, dir_okay=False),
+    type=click.Path(dir_okay=False),
     required=False,
-    default="cookies.txt",
-    help="Path to cookies.txt for youtube-up fallback",
+    default=None,
+    help="Path to cookies.txt (for youtube-up fallback upload)",
 )
 def upload(
     video: str,
@@ -243,8 +243,8 @@ def upload(
     thumbnail: Optional[str],
     playlist: Optional[str],
     schedule: Optional[str],
-    client_secrets: str,
-    cookies: str,
+    client_secrets: Optional[str],
+    cookies: Optional[str],
 ):
     """Upload a video to YouTube with automatic fallback."""
     try:
@@ -335,17 +335,17 @@ def upload(
 )
 @click.option(
     "--client-secrets",
-    type=click.Path(exists=True, dir_okay=False),
+    type=click.Path(dir_okay=False),
     required=False,
-    default="client_secrets.json",
-    help="Path to OAuth client_secrets.json",
+    default=None,
+    help="Path to OAuth client_secrets.json (for YouTube API upload)",
 )
 @click.option(
     "--cookies",
-    type=click.Path(exists=True, dir_okay=False),
+    type=click.Path(dir_okay=False),
     required=False,
-    default="cookies.txt",
-    help="Path to cookies.txt for youtube-up fallback",
+    default=None,
+    help="Path to cookies.txt (for youtube-up fallback upload)",
 )
 def publish(
     length: str,
@@ -361,8 +361,8 @@ def publish(
     thumbnail: Optional[str],
     playlist: Optional[str],
     schedule: Optional[str],
-    client_secrets: str,
-    cookies: str,
+    client_secrets: Optional[str],
+    cookies: Optional[str],
     cover_image: Optional[str],
     slideshow_dir: Optional[str],
     slideshow_framerate: str,

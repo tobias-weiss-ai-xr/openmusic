@@ -6,6 +6,11 @@ requires-python = ">=3.12"
 dependencies = ["click>=8.0", "PyYAML>=6.0", "numpy>=1.20", "soundfile>=0.12"]
 
 [project.optional-dependencies]
+artwork = [
+  "openart>=0.1.0",
+  "svgwrite>=1.4.3",
+  "cairosvg>=2.7.0",
+]
 dev = ["pytest>=7.0.0", "PyYAML>=6.0"]
 acestep = [
   "torch==2.10.0+cu128",

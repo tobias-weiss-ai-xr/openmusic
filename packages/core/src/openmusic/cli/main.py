@@ -40,7 +40,13 @@ def _parse_length_to_seconds(length: str) -> float:
 
 
 def _build_config_from_flags(
-    length: str, bpm: int, key: str, output: str, skip_effects: bool = False
+    length: str,
+    bpm: int,
+    key: str,
+    output: str,
+    skip_effects: bool = False,
+    generate_cover: bool = False,
+    cover_theme: str = "dark_industrial",
 ) -> MixConfig:
     seconds = _parse_length_to_seconds(length)
     return MixConfig(
@@ -49,6 +55,8 @@ def _build_config_from_flags(
         key=key,
         output_path=output,
         skip_effects=skip_effects,
+        generate_cover=generate_cover,
+        cover_theme=cover_theme,
     )
 
 
@@ -76,6 +84,17 @@ def main():
     default=False,
     help="Bypass effects processing; assemble raw audio segments directly",
 )
+@click.option(
+    "--cover",
+    is_flag=True,
+    default=False,
+    help="Generate cover art alongside the mix",
+)
+@click.option(
+    "--cover-theme",
+    default="dark_industrial",
+    help="Cover art theme (dark_industrial, deep_atmospheric, minimal_geometric, retro_dub_plate)",
+)
 def generate(
     length: str,
     bpm: int,
@@ -83,6 +102,8 @@ def generate(
     output: str,
     config: Optional[str],
     no_effects: bool,
+    cover: bool,
+    cover_theme: str,
 ):
     """Generate a new mix using MixOrchestrator.
 
@@ -100,7 +121,13 @@ def generate(
             output = str(cfg.get("output_path", cfg.get("output", output)))
 
         mix_config = _build_config_from_flags(
-            length, bpm, key, output, skip_effects=no_effects
+            length,
+            bpm,
+            key,
+            output,
+            skip_effects=no_effects,
+            generate_cover=cover,
+            cover_theme=cover_theme,
         )
         # Use a progress reporter as a lightweight progress indicator
         total_segments = max(

@@ -139,6 +139,10 @@ class MixConfig:
     segment_duration: float = 180.0
     effects_preset: str = "deep_dub"
     skip_effects: bool = False
+    generate_cover: bool = False
+    cover_theme: str = "dark_industrial"
+    cover_title: str = ""
+    cover_artist: str = "OpenMusic"
 
 
 class MixOrchestrator:
@@ -159,6 +163,11 @@ class MixOrchestrator:
 
         # Assemble all segments into final output
         self._assemble_segments(segments, Path(self.config.output_path))
+
+        # Generate cover art if requested
+        if self.config.generate_cover:
+            cover_path = self._generate_cover_art(Path(self.config.output_path))
+            logger.info(f"Cover art generated: {cover_path}")
 
         # Clean up temporary segment files
         for seg in segments:
@@ -380,3 +389,60 @@ class MixOrchestrator:
             f"dub chords with delay and reverb, hypnotic rhythm in {self.config.key}, "
             f"{self.config.bpm} BPM"
         )
+
+    def _generate_cover_art(self, output_path: Path) -> Path:
+        """Generate cover art SVG and optionally PNG alongside the mix output.
+
+        Args:
+            output_path: Path to the generated mix file (e.g., "mix.flac")
+
+        Returns:
+            Path to the generated cover file (SVG, with PNG as bonus if available)
+        """
+        try:
+            from openart.config import ArtworkConfig
+            from openart.generator import ArtworkGenerator
+        except ImportError:
+            logger.warning(
+                "openart not installed. Install with: uv pip install -e "
+                "'C:\\Users\\Tobias\\workspace\\artwork\\openart' "
+                "--python ACE-Step-1.5/.venv/Scripts/python.exe -U openmusic-core[artwork]"
+            )
+            # Return a dummy path so code doesn't crash
+            return output_path.parent / f"{output_path.stem}_cover.svg"
+
+        # Derive cover path from mix output path
+        stem = output_path.stem
+        cover_svg_path = output_path.parent / f"{stem}_cover.svg"
+
+        # Determine title
+        title = self.config.cover_title if self.config.cover_title else "Dub Techno Mix"
+
+        # Create artwork config
+        config = ArtworkConfig(
+            width=1000,
+            height=1000,
+            title=title,
+            subtitle="",
+            artist=self.config.cover_artist,
+            theme=self.config.cover_theme,
+        )
+
+        # Generate SVG
+        generator = ArtworkGenerator(config)
+        svg_path = generator.save(str(cover_svg_path))
+        logger.info(f"Cover SVG saved to: {svg_path}")
+
+        # Try to convert to PNG
+        try:
+            import cairosvg
+
+            cover_png_path = output_path.parent / f"{stem}_cover.png"
+            cairosvg.svg2png(url=str(svg_path), write_to=str(cover_png_path))
+            logger.info(f"Cover PNG saved to: {cover_png_path}")
+        except ImportError:
+            logger.info("cairosvg not available, skipping PNG conversion")
+        except Exception as e:
+            logger.warning(f"Failed to convert SVG to PNG: {e}")
+
+        return Path(svg_path)

@@ -34,13 +34,16 @@ def _parse_length_to_seconds(length: str) -> float:
         raise click.BadParameter(f"Invalid length value: {length}")
 
 
-def _build_config_from_flags(length: str, bpm: int, key: str, output: str) -> MixConfig:
+def _build_config_from_flags(
+    length: str, bpm: int, key: str, output: str, skip_effects: bool = False
+) -> MixConfig:
     seconds = _parse_length_to_seconds(length)
     return MixConfig(
         length=float(seconds),
         bpm=bpm,
         key=key,
         output_path=output,
+        skip_effects=skip_effects,
     )
 
 
@@ -62,7 +65,20 @@ def main():
     required=False,
     help="Path to a YAML config file to generate from",
 )
-def generate(length: str, bpm: int, key: str, output: str, config: Optional[str]):
+@click.option(
+    "--no-effects",
+    is_flag=True,
+    default=False,
+    help="Bypass effects processing; assemble raw audio segments directly",
+)
+def generate(
+    length: str,
+    bpm: int,
+    key: str,
+    output: str,
+    config: Optional[str],
+    no_effects: bool,
+):
     """Generate a new mix using MixOrchestrator.
 
     You can either pass explicit flags (length/bpm/key/output) or a --config file
@@ -78,7 +94,9 @@ def generate(length: str, bpm: int, key: str, output: str, config: Optional[str]
             key = str(cfg.get("key", key))
             output = str(cfg.get("output_path", cfg.get("output", output)))
 
-        mix_config = _build_config_from_flags(length, bpm, key, output)
+        mix_config = _build_config_from_flags(
+            length, bpm, key, output, skip_effects=no_effects
+        )
         # Use a progress reporter as a lightweight progress indicator
         total_segments = max(
             1, int((mix_config.length) / getattr(mix_config, "segment_duration", 180.0))

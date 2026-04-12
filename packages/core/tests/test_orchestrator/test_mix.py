@@ -5,7 +5,9 @@ import math
 from pathlib import Path
 from unittest.mock import MagicMock, patch, call
 
+import numpy as np
 import pytest
+import soundfile as sf
 
 from openmusic.orchestrator.mix import MixConfig, MixOrchestrator
 
@@ -149,17 +151,29 @@ class TestMixOrchestratorProcessSegment:
     def test_process_segment_calls_bridge(self, MockGenerator, MockBridge):
         config = MixConfig()
         mock_bridge = MockBridge.return_value
-        mock_bridge.call_audio_engine.return_value = (
-            "/tmp/openmusic-out-xxx/processed.wav"
-        )
 
         orch = MixOrchestrator(config)
 
         input_path = Path("/tmp/segment_0.wav")
+
+        # Create actual file for bridge to return
+        def mock_bridge_call(input_files, output_path, config):
+            import tempfile
+
+            # Create a minimal WAV file
+            sample_rate = 48000
+            num_samples = sample_rate  # 1 second
+            audio = np.zeros((num_samples, 2), dtype=np.float32)
+            sf.write(output_path, audio, sample_rate, format="WAV")
+            return output_path
+
+        mock_bridge.call_audio_engine.side_effect = mock_bridge_call
+
         result = orch._process_segment(input_path)
 
         mock_bridge.call_audio_engine.assert_called_once()
         assert isinstance(result, Path)
+        assert result.exists()
 
     @patch("openmusic.orchestrator.mix.TypeScriptBridge")
     @patch("openmusic.orchestrator.mix.ACEStepGenerator")
@@ -184,11 +198,18 @@ class TestMixOrchestratorProcessSegment:
     ):
         config = MixConfig()
         mock_bridge = MockBridge.return_value
-        mock_bridge.call_audio_engine.return_value = (
-            "/tmp/openmusic-out-xxx/processed.wav"
-        )
 
         orch = MixOrchestrator(config)
+
+        # Create actual file for bridge to return
+        def mock_bridge_call(input_files, output_path, config):
+            sample_rate = 48000
+            num_samples = sample_rate  # 1 second
+            audio = np.zeros((num_samples, 2), dtype=np.float32)
+            sf.write(output_path, audio, sample_rate, format="WAV")
+            return output_path
+
+        mock_bridge.call_audio_engine.side_effect = mock_bridge_call
 
         orch._process_segment(Path("/tmp/segment_0.wav"))
 
@@ -208,11 +229,19 @@ class TestMixOrchestratorProcessSegment:
     ):
         config = MixConfig()
         mock_bridge = MockBridge.return_value
-        mock_bridge.call_audio_engine.return_value = (
-            "/tmp/openmusic-out-xxx/processed.wav"
-        )
 
         orch = MixOrchestrator(config)
+
+        # Create actual file for bridge to return
+        def mock_bridge_call(input_files, output_path, config):
+            sample_rate = 48000
+            num_samples = sample_rate  # 1 second
+            audio = np.zeros((num_samples, 2), dtype=np.float32)
+            sf.write(output_path, audio, sample_rate, format="WAV")
+            return output_path
+
+        mock_bridge.call_audio_engine.side_effect = mock_bridge_call
+
         orch._process_segment(Path("/tmp/segment_0.wav"))
 
         call_args = mock_bridge.call_audio_engine.call_args
@@ -252,11 +281,19 @@ class TestMixOrchestratorProcessSegment:
     def test_process_segment_uses_correct_preset(self, MockGenerator, MockBridge):
         config = MixConfig(effects_preset="club_dub")
         mock_bridge = MockBridge.return_value
-        mock_bridge.call_audio_engine.return_value = (
-            "/tmp/openmusic-out-xxx/processed.wav"
-        )
 
         orch = MixOrchestrator(config)
+
+        # Create actual file for bridge to return
+        def mock_bridge_call(input_files, output_path, config):
+            sample_rate = 48000
+            num_samples = sample_rate  # 1 second
+            audio = np.zeros((num_samples, 2), dtype=np.float32)
+            sf.write(output_path, audio, sample_rate, format="WAV")
+            return output_path
+
+        mock_bridge.call_audio_engine.side_effect = mock_bridge_call
+
         orch._process_segment(Path("/tmp/segment_0.wav"))
 
         call_args = mock_bridge.call_audio_engine.call_args
@@ -272,3 +309,143 @@ class TestMixOrchestratorProcessSegment:
 
         with pytest.raises(ValueError, match="Unknown effects preset"):
             orch._process_segment(Path("/tmp/segment_0.wav"))
+
+
+class TestMixOrchestratorAssembly:
+    def _make_test_wav(self, path: Path, duration_ms: int = 100) -> Path:
+        """Create a minimal valid WAV file using soundfile."""
+        sample_rate = 48000
+        channels = 2
+        num_samples = int(sample_rate * duration_ms / 1000)
+        # Create silent audio
+        audio = np.zeros((num_samples, channels), dtype=np.float32)
+        sf.write(str(path), audio, sample_rate, format="WAV")
+        return path
+
+    def test_assemble_segments_creates_output_file(self, tmp_path: Path) -> None:
+        config = MixConfig(output_path=str(tmp_path / "mix.wav"))
+        orch = MixOrchestrator(config)
+
+        # Create two test segments
+        seg1 = self._make_test_wav(tmp_path / "seg1.wav", duration_ms=100)
+        seg2 = self._make_test_wav(tmp_path / "seg2.wav", duration_ms=100)
+
+        orch._assemble_segments([seg1, seg2], Path(config.output_path))
+
+        output_path = Path(config.output_path)
+        assert output_path.exists()
+
+        # Verify the output file has reasonable duration
+        audio, sr = sf.read(str(output_path))
+        # Two 100ms segments (4800 each) minus crossfade (1200 = 1/4 of 4800)
+        expected_samples = 4800 + 4800 - 1200
+        assert audio.shape[0] == expected_samples
+
+    def test_assemble_segments_with_single_segment(self, tmp_path: Path) -> None:
+        config = MixConfig(output_path=str(tmp_path / "mix.wav"))
+        orch = MixOrchestrator(config)
+
+        seg = self._make_test_wav(tmp_path / "seg.wav", duration_ms=100)
+        orch._assemble_segments([seg], Path(config.output_path))
+
+        audio, sr = sf.read(str(config.output_path))
+        expected_samples = int(48000 * 0.1)
+        assert audio.shape[0] == expected_samples
+
+    def test_assemble_segments_handles_wav_format(self, tmp_path: Path) -> None:
+        config = MixConfig(output_path=str(tmp_path / "output.wav"))
+        orch = MixOrchestrator(config)
+
+        seg1 = self._make_test_wav(tmp_path / "seg1.wav")
+        seg2 = self._make_test_wav(tmp_path / "seg2.wav")
+
+        orch._assemble_segments([seg1, seg2], Path(config.output_path))
+
+        output_path = Path(config.output_path)
+        assert output_path.exists()
+        assert output_path.suffix == ".wav"
+
+    def test_assemble_segments_handles_flac_format(self, tmp_path: Path) -> None:
+        config = MixConfig(output_path=str(tmp_path / "output.flac"))
+        orch = MixOrchestrator(config)
+
+        seg1 = self._make_test_wav(tmp_path / "seg1.wav")
+        seg2 = self._make_test_wav(tmp_path / "seg2.wav")
+
+        orch._assemble_segments([seg1, seg2], Path(config.output_path))
+
+        output_path = Path(config.output_path)
+        assert output_path.exists()
+        assert output_path.suffix == ".flac"
+
+    def test_assemble_segments_empty_list_raises_error(self, tmp_path: Path) -> None:
+        config = MixConfig(output_path=str(tmp_path / "mix.wav"))
+        orch = MixOrchestrator(config)
+
+        with pytest.raises(ValueError, match="No segments to assemble"):
+            orch._assemble_segments([], Path(config.output_path))
+
+    @patch("openmusic.orchestrator.mix.ACEStepGenerator")
+    @patch("openmusic.orchestrator.mix.TypeScriptBridge")
+    def test_process_segment_copies_file_from_temp_dir(
+        self, MockBridge, MockGenerator, tmp_path: Path
+    ) -> None:
+        config = MixConfig(length=60, segment_duration=60)
+        mock_bridge = MockBridge.return_value
+
+        orch = MixOrchestrator(config)
+        orch.config.output_path = str(tmp_path / "test_output.wav")
+
+        input_path = self._make_test_wav(tmp_path / "input.wav", duration_ms=50)
+
+        # The bridge will write to a temp path that gets deleted
+        def write_to_temp(input_files, output_path, config):
+            # Write a file to the temp path
+            self._make_test_wav(Path(output_path), duration_ms=50)
+            return output_path
+
+        mock_bridge.call_audio_engine.side_effect = write_to_temp
+
+        result = orch._process_segment(input_path)
+
+        # The returned path should point to a file that exists
+        assert result.exists()
+        assert result.is_file()
+
+    @patch("openmusic.orchestrator.mix.ACEStepGenerator")
+    @patch("openmusic.orchestrator.mix.TypeScriptBridge")
+    def test_generate_mix_assembles_segments(
+        self, MockBridge, MockGenerator, tmp_path: Path
+    ) -> None:
+        config = MixConfig(
+            length=120, segment_duration=60, output_path=str(tmp_path / "mix.wav")
+        )
+        mock_gen = MockGenerator.return_value
+        mock_bridge = MockBridge.return_value
+
+        orch = MixOrchestrator(config)
+
+        # Set up mocks to create actual files
+        counter = [0]
+
+        def mock_generate_texture(prompt, duration, bpm, key):
+            counter[0] += 1
+            return self._make_test_wav(tmp_path / f"raw_{counter[0]}.wav")
+
+        def write_to_temp(input_files, output_path, config):
+            return self._make_test_wav(Path(output_path), duration_ms=50)
+
+        mock_gen.generate_texture.side_effect = mock_generate_texture
+        mock_bridge.call_audio_engine.side_effect = write_to_temp
+
+        result_path = orch.generate_mix()
+
+        # Verify output file exists
+        assert result_path.exists()
+        assert result_path == Path(config.output_path)
+
+        # Verify the file has reasonable duration (should be ~2 segments)
+        audio, sr = sf.read(str(result_path))
+        # 2 segments of 50ms (2400 samples each) minus crossfade (600 = 1/4 of 2400)
+        expected_samples = 2400 + 2400 - 600
+        assert audio.shape[0] >= expected_samples

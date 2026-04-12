@@ -1,10 +1,17 @@
+import logging
 import math
+import shutil
 import tempfile
 from dataclasses import dataclass
 from pathlib import Path
 
+import numpy as np
+import soundfile as sf
+
 from openmusic.acestep import ACEStepGenerator
 from openmusic.bridge.typescript_bridge import TypeScriptBridge
+
+logger = logging.getLogger(__name__)
 
 _EFFECTS_PRESETS: dict[str, dict] = {
     "deep_dub": {
@@ -131,6 +138,7 @@ class MixConfig:
     output_path: str = "mix.flac"
     segment_duration: float = 180.0
     effects_preset: str = "deep_dub"
+    skip_effects: bool = False
 
 
 class MixOrchestrator:
@@ -148,6 +156,17 @@ class MixOrchestrator:
             raw = self._generate_segment(i, self.segment_count)
             processed = self._process_segment(raw)
             segments.append(processed)
+
+        # Assemble all segments into final output
+        self._assemble_segments(segments, Path(self.config.output_path))
+
+        # Clean up temporary segment files
+        for seg in segments:
+            try:
+                seg.unlink()
+            except Exception as e:
+                logger.warning(f"Failed to clean up segment file {seg}: {e}")
+
         return Path(self.config.output_path)
 
     def _generate_segment(self, index: int, total: int) -> Path:
@@ -169,6 +188,23 @@ class MixOrchestrator:
         return _EFFECTS_PRESETS[preset_name]
 
     def _process_segment(self, segment_path: Path) -> Path:
+        if self.config.skip_effects:
+            # Bypass bridge entirely – copy raw WAV to a persistent temp file
+            persistent_output = tempfile.NamedTemporaryFile(
+                prefix="openmusic-seg-",
+                suffix=".wav",
+                delete=False,
+            )
+            persistent_output.close()
+            persistent_path = Path(persistent_output.name)
+            try:
+                shutil.copy(str(segment_path), str(persistent_path))
+            except Exception:
+                if persistent_path.exists():
+                    persistent_path.unlink()
+                raise
+            return persistent_path
+
         effects = self._get_effects_config()
 
         config = {
@@ -184,14 +220,137 @@ class MixOrchestrator:
             },
         }
 
-        with tempfile.TemporaryDirectory(prefix="openmusic-out-") as tmpdir:
-            output_path = str(Path(tmpdir) / "processed.wav")
-            self.bridge.call_audio_engine(
-                input_files=[str(segment_path)],
-                output_path=output_path,
-                config=config,
-            )
-            return Path(output_path)
+        # Create persistent temp file outside the context manager
+        persistent_output = tempfile.NamedTemporaryFile(
+            prefix="openmusic-seg-",
+            suffix=".wav",
+            delete=False,
+        )
+        persistent_output.close()
+        persistent_path = Path(persistent_output.name)
+
+        try:
+            with tempfile.TemporaryDirectory(prefix="openmusic-out-") as tmpdir:
+                temp_output = Path(tmpdir) / "processed.wav"
+                self.bridge.call_audio_engine(
+                    input_files=[str(segment_path)],
+                    output_path=str(temp_output),
+                    config=config,
+                )
+                # Copy to persistent location before temp dir is deleted
+                shutil.copy(str(temp_output), str(persistent_path))
+        except Exception:
+            # Clean up persistent file if processing failed
+            if persistent_path.exists():
+                persistent_path.unlink()
+            raise
+
+        return persistent_path
+
+    def _assemble_segments(self, segments: list[Path], output_path: Path) -> None:
+        """Concatenate audio segments with crossfade between them."""
+        if not segments:
+            raise ValueError("No segments to assemble")
+
+        logger.info(f"Assembling {len(segments)} segments into {output_path}")
+
+        # Load first segment to get audio properties
+        first_audio, first_sr = sf.read(str(segments[0]))
+        channels = 1 if first_audio.ndim == 1 else first_audio.shape[1]
+        sample_rate = first_sr
+
+        # Crossfade duration: ~1 second at 48kHz, but ensure it's less than segment length
+        desired_crossfade = sample_rate  # 1 second
+        # Calculate crossfade based on minimum segment length
+        min_seg_len = len(first_audio)
+        for seg_path in segments:
+            audio, sr = sf.read(str(seg_path))
+            if sr != sample_rate:
+                raise ValueError(
+                    f"Sample rate mismatch: {seg_path} has {sr}, expected {sample_rate}"
+                )
+            min_seg_len = min(min_seg_len, len(audio))
+
+        # Use 1/4 of minimum segment length for crossfade, max 1 second
+        crossfade_samples = min(desired_crossfade, min_seg_len // 4)
+        if crossfade_samples < sample_rate // 100:  # At least 10ms
+            crossfade_samples = sample_rate // 100
+
+        # Load all segments
+        segment_data = []
+        total_samples = 0
+        for seg_path in segments:
+            audio, sr = sf.read(str(seg_path))
+            if sr != sample_rate:
+                raise ValueError(
+                    f"Sample rate mismatch: {seg_path} has {sr}, expected {sample_rate}"
+                )
+            segment_data.append(audio)
+            total_samples += len(audio)
+
+        # Calculate total length with crossfade
+        # For n segments: length = sum(segment_lengths) - (n-1) * crossfade
+        total_samples -= (len(segments) - 1) * crossfade_samples
+
+        # Create output array
+        if channels == 1:
+            combined = np.zeros(total_samples, dtype=np.float32)
+        else:
+            combined = np.zeros((total_samples, channels), dtype=np.float32)
+
+        # Assemble with crossfade
+        write_pos = 0
+        for i, audio in enumerate(segment_data):
+            seg_len = len(audio)
+            if channels == 1 and audio.ndim == 1:
+                audio = audio[:, np.newaxis]
+            elif channels == 2 and audio.ndim == 1:
+                audio = audio[:, np.newaxis]
+                audio = np.repeat(audio, 2, axis=1)
+
+            if i == 0:
+                # First segment: write all except crossfade portion at end
+                end_pos = seg_len - crossfade_samples
+                combined[write_pos:end_pos] = audio[:end_pos]
+                write_pos = end_pos
+            elif i == len(segments) - 1:
+                # Last segment: crossfade with previous, write remainder
+                # Crossfade region
+                crossfade_start = write_pos - crossfade_samples
+                crossfade_end = write_pos
+                for j in range(crossfade_samples):
+                    alpha = j / crossfade_samples
+                    combined[crossfade_start + j] = (1 - alpha) * combined[
+                        crossfade_start + j
+                    ] + alpha * audio[j]
+                # Write remainder
+                remaining_len = seg_len - crossfade_samples
+                combined[write_pos : write_pos + remaining_len] = audio[
+                    crossfade_samples:
+                ]
+            else:
+                # Middle segments: crossfade with previous, write middle, reserve for next
+                # Crossfade with previous segment
+                crossfade_start = write_pos - crossfade_samples
+                crossfade_end = write_pos
+                for j in range(crossfade_samples):
+                    alpha = j / crossfade_samples
+                    combined[crossfade_start + j] = (1 - alpha) * combined[
+                        crossfade_start + j
+                    ] + alpha * audio[j]
+                # Write main portion
+                main_len = seg_len - 2 * crossfade_samples
+                combined[write_pos : write_pos + main_len] = audio[
+                    crossfade_samples : seg_len - crossfade_samples
+                ]
+                write_pos += main_len
+
+            logger.info(f"Assembled segment {i + 1}/{len(segments)}")
+
+        # Write output file with appropriate format
+        format_str = "WAV" if output_path.suffix.lower() == ".wav" else "FLAC"
+        sf.write(str(output_path), combined, sample_rate, format=format_str)
+        logger.info(f"Mix written to {output_path}")
 
     def _get_segment_prompt(self, index: int, total: int) -> str:
         position = index / max(total - 1, 1)

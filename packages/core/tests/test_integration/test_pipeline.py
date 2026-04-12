@@ -291,6 +291,13 @@ class TestBridgeConfigSchema:
 
         def intercept(input_files, output_path, config):
             captured.update(config)
+            # Write a minimal WAV file so _process_segment can copy it
+            import numpy as np
+            import soundfile as sf
+
+            sf.write(
+                output_path, np.zeros((480, 2), dtype=np.float32), 48000, format="WAV"
+            )
             return output_path
 
         with patch.object(orch.bridge, "call_audio_engine", side_effect=intercept):

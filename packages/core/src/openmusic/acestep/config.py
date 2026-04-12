@@ -7,7 +7,7 @@ class ACEStepConfig:
 
     model_path: str = "acestep-v15-turbo"
     device: str = "auto"
-    audio_format: str = "flac"
+    audio_format: str = "wav"
     max_duration: int = 600
     inference_steps: int = 8
 

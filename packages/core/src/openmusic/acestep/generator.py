@@ -141,6 +141,7 @@ class ACEStepGenerator:
             duration=params_dict.get("duration", 30),
             instrumental=params_dict.get("instrumental", True),
             inference_steps=self.config.inference_steps,
+            keyscale=params_dict.get("key", ""),
         )
 
         ace_config = GenerationConfig(

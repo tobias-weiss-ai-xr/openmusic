@@ -12,7 +12,7 @@ class TestACEStepConfig:
         config = ACEStepConfig()
         assert config.model_path == "acestep-v15-turbo"
         assert config.device == "auto"
-        assert config.audio_format == "flac"
+        assert config.audio_format == "wav"
         assert config.max_duration == 600
         assert config.inference_steps == 8
 

@@ -9,6 +9,16 @@ from openmusic.export.metadata import (
     TrackMetadata,
     embed_metadata,
 )
+from openmusic.export.youtube_uploader import (
+    OAuthNotConfiguredError,
+    QuotaExceededError,
+    YouTubeAPIUploader,
+    YouTubeUploadConfig,
+    YouTubeUploadError,
+    YouTubeUploader,
+    YouTubeUpFallback,
+    YouTubeUpNotInstalledError,
+)
 
 __all__ = [
     "AudioEncoder",
@@ -18,4 +28,13 @@ __all__ = [
     "EmbeddingError",
     "TrackMetadata",
     "embed_metadata",
+    # YouTube uploader
+    "YouTubeUploadConfig",
+    "YouTubeUploader",
+    "YouTubeAPIUploader",
+    "YouTubeUpFallback",
+    "YouTubeUploadError",
+    "QuotaExceededError",
+    "OAuthNotConfiguredError",
+    "YouTubeUpNotInstalledError",
 ]

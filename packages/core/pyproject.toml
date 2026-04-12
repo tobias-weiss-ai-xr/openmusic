@@ -25,6 +25,12 @@ acestep = [
   "torchao",
   "toml",
 ]
+youtube = [
+  "google-api-python-client>=2.100.0",
+  "google-auth-oauthlib>=1.0.0",
+  "google-auth-httplib2>=0.1.0",
+  "youtube-up>=0.5.0",
+]
 
 [build-system]
 requires = ["hatchling"]

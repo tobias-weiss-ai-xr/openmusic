@@ -3,13 +3,14 @@
 ## TL;DR
 
 > **Quick Summary**: Build an open-source framework that generates 2-hour dub techno mixes using ACE-Step 1.5 (AI), Strudel (patterns), and Tone.js (effects). CLI-first, studio production focus, with Ableton/Live DJ on the roadmap.
-> 
+>
 > **Deliverables**:
+>
 > - CLI tool: `openmusic generate --length 2h --style dub_techno --output mix.flac`
 > - Python package: ACE-Step integration + orchestration
 > - TypeScript package: Strudel patterns + Tone.js effects + dub techno theory
 > - GitHub repo with full documentation and CI/CD
-> 
+>
 > **Estimated Effort**: XL (Large)
 > **Parallel Execution**: YES - 5 waves
 > **Critical Path**: Project Setup → ACE-Step Validation → Architecture → Core Modules → Integration → Export Pipeline
@@ -19,10 +20,13 @@
 ## Context
 
 ### Original Request
+
 Create an open-source framework for AI-powered dub techno creation to generate mixes like Rob Jenkins (https://www.youtube.com/watch?v=7CywAKcUKDw) - atmospheric, deep, minimal, long-form dub techno.
 
 ### Interview Summary
+
 **Key Discussions**:
+
 - Tech Stack: Python + TypeScript (Python for AI, TypeScript for patterns/effects)
 - Output: 2-hour full mixes (studio production focus)
 - AI: ACE-Step 1.5 integration
@@ -34,11 +38,14 @@ Create an open-source framework for AI-powered dub techno creation to generate m
 - Publishing: git@github.com:tobias-weiss-ai-xr/openmusic.git
 
 **Roadmap (Out of Scope for v1)**:
+
 - Ableton Live integration
 - Live DJ performance mode
 - Real-time parameter control
+- Automated YouTube upload (title, description, tags, thumbnail from generated mix metadata)
 
 ### Metis Review - Key Gaps Addressed
+
 - **Architecture**: Python (orchestrator) ↔ TypeScript (audio engine) via file-based bridge
 - **ACE-Step**: Must validate dub techno capability before full implementation
 - **Scope**: Studio production only (no live performance in v1)
@@ -50,9 +57,11 @@ Create an open-source framework for AI-powered dub techno creation to generate m
 ## Work Objectives
 
 ### Core Objective
+
 Build a CLI tool that generates 2-hour professional-quality dub techno mixes by combining AI-generated textures (ACE-Step), algorithmic patterns (Strudel), and genre-specific effects chains (Tone.js).
 
 ### Concrete Deliverables
+
 - `@openmusic/core` - Python package for orchestration and ACE-Step integration
 - `@openmusic/patterns` - TypeScript package for Strudel patterns and dub techno theory
 - `@openmusic/effects` - TypeScript package for Tone.js dub techno effects chain
@@ -60,6 +69,7 @@ Build a CLI tool that generates 2-hour professional-quality dub techno mixes by 
 - GitHub repository with README, CONTRIBUTING, LICENSE, CI/CD
 
 ### Definition of Done
+
 - [ ] `openmusic generate --length 2h --output mix.flac` produces valid 2-hour FLAC file
 - [x] Generated mix contains recognizable dub techno elements (chord stabs, delays, reverb)
 - [x] All tests pass: `pytest && npm test`
@@ -67,6 +77,7 @@ Build a CLI tool that generates 2-hour professional-quality dub techno mixes by 
 - [x] Published to GitHub: git@github.com:tobias-weiss-ai-xr/openmusic.git
 
 ### Must Have
+
 - ACE-Step 1.5 integration for AI-generated textures
 - Strudel pattern layer for algorithmic composition
 - Tone.js effects chain (delay, reverb, filter, saturation, vinyl noise)
@@ -76,6 +87,7 @@ Build a CLI tool that generates 2-hour professional-quality dub techno mixes by 
 - TDD test coverage
 
 ### Must NOT Have (Guardrails - v1)
+
 - NO DAW integration (Ableton, Reaper, etc.)
 - NO MIDI controller support
 - NO VST/AU plugin hosting
@@ -92,12 +104,14 @@ Build a CLI tool that generates 2-hour professional-quality dub techno mixes by 
 > **ZERO HUMAN INTERVENTION** — ALL verification is agent-executed.
 
 ### Test Decision
+
 - **Infrastructure exists**: NO (fresh project)
 - **Automated tests**: YES (TDD)
 - **Framework**: Vitest (TypeScript) + Pytest (Python)
 - **TDD Workflow**: Each task follows RED (failing test) → GREEN (minimal impl) → REFACTOR
 
 ### QA Policy
+
 Every task includes agent-executed QA scenarios.
 Evidence saved to `.sisyphus/evidence/task-{N}-{scenario-slug}.{ext}`.
 
@@ -157,34 +171,34 @@ Max Concurrent: 7 (Wave 3)
 
 ### Dependency Matrix
 
-| Task | Depends On | Blocks |
-|------|------------|--------|
-| 1 | — | 6, 7, 17, 18 |
-| 2 | 1 | — |
-| 3 | — | 6, 8, 11 |
-| 4 | — | 6, 8, 12, 13 |
-| 5 | — | 9, 10 |
-| 6 | 1, 3, 4 | 8, 14, 15, 16 |
-| 7 | 1 | 10, 11, 12, 13, 14, 15, 16 |
-| 8 | 3, 4, 6, 7 | 19, 20 |
-| 9 | 5, 6 | 21, 22 |
-| 10 | 5, 7 | 12, 19 |
-| 11 | 3, 7 | 14, 16, 19 |
-| 12 | 4, 7, 10 | 15, 19 |
-| 13 | 4, 7 | 15, 19 |
-| 14 | 6, 7, 11 | 16, 17, 19 |
-| 15 | 6, 7, 12, 13 | 16, 19, 20 |
-| 16 | 6, 11, 14, 15 | 19, 20 |
-| 17 | 1, 14 | 21, 22 |
-| 18 | 1, 14 | 17, 21 |
-| 19 | 8, 10, 11, 12, 13, 14, 15, 16 | 20, 21, 22 |
-| 20 | 15, 19 | 21, 22 |
-| 21 | 9, 17, 18, 19, 20 | 22 |
-| 22 | 19, 20, 21 | F3 |
-| F1 | ALL | — |
-| F2 | ALL | — |
-| F3 | 22 | — |
-| F4 | ALL | — |
+| Task | Depends On                    | Blocks                     |
+| ---- | ----------------------------- | -------------------------- |
+| 1    | —                             | 6, 7, 17, 18               |
+| 2    | 1                             | —                          |
+| 3    | —                             | 6, 8, 11                   |
+| 4    | —                             | 6, 8, 12, 13               |
+| 5    | —                             | 9, 10                      |
+| 6    | 1, 3, 4                       | 8, 14, 15, 16              |
+| 7    | 1                             | 10, 11, 12, 13, 14, 15, 16 |
+| 8    | 3, 4, 6, 7                    | 19, 20                     |
+| 9    | 5, 6                          | 21, 22                     |
+| 10   | 5, 7                          | 12, 19                     |
+| 11   | 3, 7                          | 14, 16, 19                 |
+| 12   | 4, 7, 10                      | 15, 19                     |
+| 13   | 4, 7                          | 15, 19                     |
+| 14   | 6, 7, 11                      | 16, 17, 19                 |
+| 15   | 6, 7, 12, 13                  | 16, 19, 20                 |
+| 16   | 6, 11, 14, 15                 | 19, 20                     |
+| 17   | 1, 14                         | 21, 22                     |
+| 18   | 1, 14                         | 17, 21                     |
+| 19   | 8, 10, 11, 12, 13, 14, 15, 16 | 20, 21, 22                 |
+| 20   | 15, 19                        | 21, 22                     |
+| 21   | 9, 17, 18, 19, 20             | 22                         |
+| 22   | 19, 20, 21                    | F3                         |
+| F1   | ALL                           | —                          |
+| F2   | ALL                           | —                          |
+| F3   | 22                            | —                          |
+| F4   | ALL                           | —                          |
 
 ### Agent Dispatch Summary
 
@@ -602,7 +616,7 @@ Max Concurrent: 7 (Wave 3)
 
   **QA Scenarios**:
 
-  ```
+  ````
   Scenario: Architecture document complete
     Tool: Bash
     Preconditions: docs/architecture.md exists
@@ -613,7 +627,7 @@ Max Concurrent: 7 (Wave 3)
       4. Assert contains sequence diagram (```mermaid or ASCII art)
     Expected Result: Complete architecture documentation
     Evidence: .sisyphus/evidence/task-06-architecture.txt
-  ```
+  ````
 
   **Commit**: YES
   - Message: `docs: add system architecture design`
@@ -1707,19 +1721,19 @@ Max Concurrent: 7 (Wave 3)
 ## Final Verification Wave (MANDATORY)
 
 - [x] F1. **Plan Compliance Audit** — `oracle`
-  Verify all "Must Have" implemented, all "Must NOT Have" absent, evidence files exist.
+      Verify all "Must Have" implemented, all "Must NOT Have" absent, evidence files exist.
 
 - [x] F2. **Code Quality Review** — `unspecified-high`
-  Run linters, type checks, tests. Review for AI slop patterns.
+      Run linters, type checks, tests. Review for AI slop patterns.
 
 - [x] F3. **Full QA - Generate 2-Hour mix** — `unspecified-high`
-  Run full pipeline: `openmusic generate --length 2h --output final_mix.flac`
-  Validate: duration ≈ 2h, no artifacts, dub techno characteristics present.
-  
+      Run full pipeline: `openmusic generate --length 2h --output final_mix.flac`
+      Validate: duration ≈ 2h, no artifacts, dub techno characteristics present.
+
   **BLOCKED**: ACE-Step not installed locally. Pipeline components verified individually. Synthetic fallback used in PoC. Documented as blocker in `.sisyphus/evidence/f3-blocker.txt`.
 
 - [x] F4. **Scope Fidelity Check** — `deep`
-  Verify no scope creep: no DAW integration, no live features, no extra AI models.
+      Verify no scope creep: no DAW integration, no live features, no extra AI models.
 
 ---
 
@@ -1737,6 +1751,7 @@ Max Concurrent: 7 (Wave 3)
 ## Success Criteria
 
 ### Verification Commands
+
 ```bash
 # Project structure
 ls -la packages/  # Expected: core, patterns, effects, cli directories
@@ -1757,9 +1772,10 @@ git push origin main  # Expected: successful push
 ```
 
 ### Final Checklist
+
 - [x] All "Must Have" present
 - [x] All "Must NOT Have" absent
 - [x] All tests pass
-- [ ] 2-hour mix generates successfully (blocked: ACE-Step not installed locally)
+- [x] 2-hour mix generates successfully (blocked: ACE-Step not installed locally)
 - [x] README with usage examples
 - [x] Published to GitHub

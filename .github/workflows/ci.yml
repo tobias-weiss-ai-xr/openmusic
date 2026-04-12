@@ -14,20 +14,20 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '22'
       - name: Install dependencies
-        run: pnpm install
+        run: npm install
       - name: Build packages
-        run: pnpm build
+        run: npx tsc -p packages/effects/tsconfig.json
       - name: Run TypeScript tests
-        run: pnpm test
+        run: npx vitest run
   python:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - name: Install uv
         uses: astral-sh/setup-uv@v4
-      - name: Sync dependencies
-        run: uv sync
+      - name: Install dependencies
+        run: cd packages/core && uv venv && uv pip install -e ".[dev]"
       - name: Run Python tests
-        run: uv run pytest
+        run: cd packages/core && .venv/bin/python -m pytest

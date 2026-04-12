@@ -1,3 +1,5 @@
+import glob as globmod
+import os
 import subprocess
 from pathlib import Path
 from typing import Optional
@@ -96,6 +98,12 @@ def main():
     default="dark_industrial",
     help="Cover art theme (dark_industrial, deep_atmospheric, minimal_geometric, retro_dub_plate)",
 )
+@click.option(
+    "--cover-image",
+    type=click.Path(exists=True, dir_okay=False),
+    required=False,
+    help="Path to custom cover image (PNG/JPG) instead of auto-generated",
+)
 def generate(
     length: str,
     bpm: int,
@@ -105,6 +113,7 @@ def generate(
     no_effects: bool,
     cover: bool,
     cover_theme: str,
+    cover_image: Optional[str],
 ):
     """Generate a new mix using MixOrchestrator.
 
@@ -121,13 +130,16 @@ def generate(
             key = str(cfg.get("key", key))
             output = str(cfg.get("output_path", cfg.get("output", output)))
 
+        # If cover_image is provided, skip auto-generation
+        generate_cover_flag = cover and not cover_image
+
         mix_config = _build_config_from_flags(
             length,
             bpm,
             key,
             output,
             skip_effects=no_effects,
-            generate_cover=cover,
+            generate_cover=generate_cover_flag,
             cover_theme=cover_theme,
         )
         # Use a progress reporter as a lightweight progress indicator
@@ -277,6 +289,23 @@ def upload(
     "--no-effects", is_flag=True, default=False, help="Bypass effects processing"
 )
 @click.option("--cover-theme", default="dark_industrial", help="Cover art theme")
+@click.option(
+    "--cover-image",
+    type=click.Path(exists=True, dir_okay=False),
+    required=False,
+    help="Path to custom cover image (PNG/JPG) instead of auto-generated",
+)
+@click.option(
+    "--slideshow-dir",
+    type=click.Path(exists=True, file_okay=False),
+    required=False,
+    help="Directory of images for slow slideshow video (e.g. ComfyUI output)",
+)
+@click.option(
+    "--slideshow-framerate",
+    default="auto",
+    help="Image change interval in seconds, or 'auto' to calculate from mix length / image count",
+)
 @click.option("--title", default="Dub Techno Mix", help="Video title")
 @click.option("--description", default="", help="Description text")
 @click.option(
@@ -334,6 +363,9 @@ def publish(
     schedule: Optional[str],
     client_secrets: str,
     cookies: str,
+    cover_image: Optional[str],
+    slideshow_dir: Optional[str],
+    slideshow_framerate: str,
 ):
     """Generate mix, render MP4 with ffmpeg, and upload to YouTube in one command."""
     click.echo("Starting full publish pipeline...")
@@ -342,13 +374,15 @@ def publish(
     click.echo(f"\n[1/3] Generating mix ({length}, {bpm} BPM, {key})...")
     try:
         seconds = _parse_length_to_seconds(length)
+        # Skip auto-generated cover if custom cover or slideshow is provided
+        generate_cover_flag = not (cover_image or slideshow_dir)
         mix_config = MixConfig(
             length=seconds,
             bpm=bpm,
             key=key,
             output_path=output,
             skip_effects=no_effects,
-            generate_cover=True,
+            generate_cover=generate_cover_flag,
             cover_theme=cover_theme,
             cover_title=title,
             cover_artist="OpenMusic",
@@ -367,48 +401,164 @@ def publish(
         stem = Path(output).stem
         parent = Path(output).parent
 
-        # Find cover file (prefer PNG, fall back to SVG)
-        cover_png = parent / f"{stem}_cover.png"
-        cover_svg = parent / f"{stem}_cover.svg"
+        if slideshow_dir:
+            # Slideshow mode: create video from directory of images
+            click.echo(f"  Creating slideshow from {slideshow_dir}...")
 
-        if cover_png.exists():
-            cover_input = str(cover_png)
-        elif cover_svg.exists():
-            cover_input = str(cover_svg)
-        else:
-            raise click.ClickException(
-                f"Cover art not found. Expected {cover_png} or {cover_svg}"
+            # Find all images in slideshow directory
+            image_extensions = ("*.png", "*.jpg", "*.jpeg", "*.webp")
+            image_files = []
+            for ext in image_extensions:
+                image_files.extend(
+                    sorted(globmod.glob(os.path.join(slideshow_dir, ext)))
+                )
+            image_files = sorted(set(image_files))  # deduplicate
+
+            if not image_files:
+                raise click.ClickException(f"No images found in {slideshow_dir}")
+
+            click.echo(f"  Found {len(image_files)} images")
+
+            # Calculate framerate: how long each image should display
+            if slideshow_framerate == "auto":
+                img_duration = seconds / len(image_files)
+            else:
+                img_duration = float(slideshow_framerate)
+
+            fps = 1.0 / img_duration
+            click.echo(f"  Image duration: {img_duration:.2f}s ({fps:.3f} fps)")
+
+            # Create ffmpeg concat file
+            concat_content = ""
+            for img_path in image_files:
+                # Normalize path for ffmpeg (forward slashes)
+                normalized = img_path.replace("\\", "/")
+                # Escape single quotes
+                normalized = normalized.replace("'", "'\\''")
+                concat_content += f"file '{normalized}'\n"
+                concat_content += f"duration {img_duration}\n"
+
+            # Write concat file
+            concat_path = str(parent / f"{stem}_concat.txt")
+            with open(concat_path, "w") as f:
+                f.write(concat_content)
+
+            # ffmpeg command with concat demuxer
+            cmd = [
+                "ffmpeg",
+                "-y",
+                "-f",
+                "concat",
+                "-safe",
+                "0",
+                "-i",
+                concat_path,
+                "-i",
+                str(mix_path),
+                "-c:v",
+                "libx264",
+                "-vf",
+                "scale=1920:1080:force_original_aspect_ratio=decrease,pad=1920:1080:(ow-iw)/2:(oh-ih)/2:color=black,format=yuv420p",
+                "-c:a",
+                "aac",
+                "-b:a",
+                "256k",
+                "-shortest",
+                "-movflags",
+                "+faststart",
+                "-r",
+                str(max(fps, 0.01)),  # ensure positive framerate
+                mp4_path,
+            ]
+
+            click.echo(f"  Running ffmpeg (this may take a while)...")
+            result = subprocess.run(
+                cmd, check=True, capture_output=True, text=True, timeout=3600
             )
 
-        cmd = [
-            "ffmpeg",
-            "-y",
-            "-loop",
-            "1",
-            "-i",
-            cover_input,
-            "-i",
-            str(mix_path),
-            "-c:v",
-            "libx264",
-            "-tune",
-            "stillimage",
-            "-c:a",
-            "aac",
-            "-b:a",
-            "256k",
-            "-shortest",
-            "-movflags",
-            "+faststart",
-            "-pix_fmt",
-            "yuv420p",
-            mp4_path,
-        ]
+            # Clean up concat file
+            try:
+                Path(concat_path).unlink()
+            except Exception:
+                pass
 
-        click.echo(f"  Running ffmpeg (this may take a while)...")
-        result = subprocess.run(
-            cmd, check=True, capture_output=True, text=True, timeout=3600
-        )
+        elif cover_image:
+            # Custom cover image mode
+            click.echo(f"  Using custom cover: {cover_image}")
+            cmd = [
+                "ffmpeg",
+                "-y",
+                "-loop",
+                "1",
+                "-i",
+                cover_image,
+                "-i",
+                str(mix_path),
+                "-c:v",
+                "libx264",
+                "-tune",
+                "stillimage",
+                "-c:a",
+                "aac",
+                "-b:a",
+                "256k",
+                "-shortest",
+                "-movflags",
+                "+faststart",
+                "-pix_fmt",
+                "yuv420p",
+                mp4_path,
+            ]
+
+            click.echo(f"  Running ffmpeg (this may take a while)...")
+            result = subprocess.run(
+                cmd, check=True, capture_output=True, text=True, timeout=3600
+            )
+        else:
+            # Auto-generated cover mode (existing behavior)
+            # Find cover file (prefer PNG, fall back to SVG)
+            cover_png = parent / f"{stem}_cover.png"
+            cover_svg = parent / f"{stem}_cover.svg"
+
+            if cover_png.exists():
+                cover_input = str(cover_png)
+            elif cover_svg.exists():
+                cover_input = str(cover_svg)
+            else:
+                raise click.ClickException(
+                    f"Cover art not found. Expected {cover_png} or {cover_svg}"
+                )
+
+            cmd = [
+                "ffmpeg",
+                "-y",
+                "-loop",
+                "1",
+                "-i",
+                cover_input,
+                "-i",
+                str(mix_path),
+                "-c:v",
+                "libx264",
+                "-tune",
+                "stillimage",
+                "-c:a",
+                "aac",
+                "-b:a",
+                "256k",
+                "-shortest",
+                "-movflags",
+                "+faststart",
+                "-pix_fmt",
+                "yuv420p",
+                mp4_path,
+            ]
+
+            click.echo(f"  Running ffmpeg (this may take a while)...")
+            result = subprocess.run(
+                cmd, check=True, capture_output=True, text=True, timeout=3600
+            )
+
         click.echo(f"✓ MP4 rendered: {mp4_path}")
     except subprocess.TimeoutExpired:
         raise click.ClickException("ffmpeg timed out after 1 hour")

@@ -26,7 +26,9 @@ class TypeScriptBridge:
         if effects_bin is not None:
             self.effects_bin = effects_bin
         else:
-            repo_root = Path(__file__).resolve().parent.parent.parent.parent.parent
+            repo_root = (
+                Path(__file__).resolve().parent.parent.parent.parent.parent.parent
+            )
             self.effects_bin = str(
                 repo_root / "packages" / "effects" / "dist" / "index.js"
             )
@@ -72,6 +74,16 @@ class TypeScriptBridge:
 
             if result.returncode != 0:
                 raise BridgeError("Effects processing failed", stderr=result.stderr)
+
+            # Copy processed output to requested path
+            processed = os.path.join(tmpdir, "output", "processed.wav")
+            if os.path.exists(processed):
+                os.makedirs(os.path.dirname(output_path), exist_ok=True)
+                shutil.copy2(processed, output_path)
+            else:
+                raise BridgeError(
+                    f"Effects engine did not produce output file at {processed}"
+                )
 
             return output_path
         finally:

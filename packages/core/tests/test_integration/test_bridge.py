@@ -83,10 +83,17 @@ class TestBridgeCallWithConfigJSON:
 
         captured_config = {}
 
-        def intercept(cmd, **_kw):
+        def intercept(cmd, **kw):
             idx = cmd.index("--config") + 1
             with open(cmd[idx]) as f:
                 captured_config.update(json.load(f))
+            # Create output file in temp dir
+            cwd = kw.get("cwd")
+            if cwd:
+                output_dir = os.path.join(cwd, "output")
+                os.makedirs(output_dir, exist_ok=True)
+                output_file = os.path.join(output_dir, "processed.wav")
+                Path(output_file).touch()
             return MagicMock(returncode=0, stderr="")
 
         with patch(
@@ -116,6 +123,12 @@ class TestBridgeCallWithConfigJSON:
             input_dir = os.path.join(cwd, "input")
             if os.path.exists(input_dir):
                 stem_files_found.extend(os.listdir(input_dir))
+            # Create output file in temp dir
+            if cwd:
+                output_dir = os.path.join(cwd, "output")
+                os.makedirs(output_dir, exist_ok=True)
+                output_file = os.path.join(output_dir, "processed.wav")
+                Path(output_file).touch()
             return MagicMock(returncode=0, stderr="")
 
         with patch(
@@ -139,10 +152,17 @@ class TestBridgeCallWithConfigJSON:
 
         captured_config = {}
 
-        def intercept(cmd, **_kw):
+        def intercept(cmd, **kw):
             idx = cmd.index("--config") + 1
             with open(cmd[idx]) as f:
                 captured_config.update(json.load(f))
+            # Create output file in temp dir
+            cwd = kw.get("cwd")
+            if cwd:
+                output_dir = os.path.join(cwd, "output")
+                os.makedirs(output_dir, exist_ok=True)
+                output_file = os.path.join(output_dir, "processed.wav")
+                Path(output_file).touch()
             return MagicMock(returncode=0, stderr="")
 
         with patch(
@@ -173,10 +193,17 @@ class TestBridgeCallWithConfigJSON:
 
         captured_config = {}
 
-        def intercept(cmd, **_kw):
+        def intercept(cmd, **kw):
             idx = cmd.index("--config") + 1
             with open(cmd[idx]) as f:
                 captured_config.update(json.load(f))
+            # Create output file in temp dir
+            cwd = kw.get("cwd")
+            if cwd:
+                output_dir = os.path.join(cwd, "output")
+                os.makedirs(output_dir, exist_ok=True)
+                output_file = os.path.join(output_dir, "processed.wav")
+                Path(output_file).touch()
             return MagicMock(returncode=0, stderr="")
 
         with patch(
@@ -203,10 +230,17 @@ class TestBridgeCallWithConfigJSON:
 
         captured_config = {}
 
-        def intercept(cmd, **_kw):
+        def intercept(cmd, **kw):
             idx = cmd.index("--config") + 1
             with open(cmd[idx]) as f:
                 captured_config.update(json.load(f))
+            # Create output file in temp dir
+            cwd = kw.get("cwd")
+            if cwd:
+                output_dir = os.path.join(cwd, "output")
+                os.makedirs(output_dir, exist_ok=True)
+                output_file = os.path.join(output_dir, "processed.wav")
+                Path(output_file).touch()
             return MagicMock(returncode=0, stderr="")
 
         with patch(
@@ -282,10 +316,17 @@ class TestBridgeConfigValidation:
 
         captured_config = {}
 
-        def intercept(cmd, **_kw):
+        def intercept(cmd, **kw):
             idx = cmd.index("--config") + 1
             with open(cmd[idx]) as f:
                 captured_config.update(json.load(f))
+            # Create output file in temp dir
+            cwd = kw.get("cwd")
+            if cwd:
+                output_dir = os.path.join(cwd, "output")
+                os.makedirs(output_dir, exist_ok=True)
+                output_file = os.path.join(output_dir, "processed.wav")
+                Path(output_file).touch()
             return MagicMock(returncode=0, stderr="")
 
         with patch(
@@ -315,6 +356,13 @@ class TestBridgeTempDirectoryCleanup:
         def intercept(cmd, **kw):
             nonlocal captured_tmpdir
             captured_tmpdir = kw.get("cwd")
+            # Create output file in temp dir
+            cwd = kw.get("cwd")
+            if cwd:
+                output_dir = os.path.join(cwd, "output")
+                os.makedirs(output_dir, exist_ok=True)
+                output_file = os.path.join(output_dir, "processed.wav")
+                Path(output_file).touch()
             return MagicMock(returncode=0, stderr="")
 
         with patch(
@@ -366,6 +414,39 @@ class TestBridgeTempDirectoryCleanup:
         def intercept(cmd, **kw):
             nonlocal captured_tmpdir
             captured_tmpdir = kw.get("cwd")
+            # Create output file in temp dir
+            cwd = kw.get("cwd")
+            if cwd:
+                output_dir = os.path.join(cwd, "output")
+                os.makedirs(output_dir, exist_ok=True)
+                output_file = os.path.join(output_dir, "processed.wav")
+                Path(output_file).touch()
+            return MagicMock(returncode=0, stderr="")
+
+        with patch(
+            "openmusic.bridge.typescript_bridge.subprocess.run", side_effect=intercept
+        ):
+            bridge.call_audio_engine(
+                input_files=[str(sample_wav)],
+                output_path=output_path,
+                config=bridge_config_dict,
+            )
+
+        assert captured_tmpdir is not None
+        assert "openmusic-" in os.path.basename(captured_tmpdir)
+
+        captured_tmpdir = None
+
+        def intercept(cmd, **kw):
+            nonlocal captured_tmpdir
+            captured_tmpdir = kw.get("cwd")
+            # Create output file in temp dir
+            cwd = kw.get("cwd")
+            if cwd:
+                output_dir = os.path.join(cwd, "output")
+                os.makedirs(output_dir, exist_ok=True)
+                output_file = os.path.join(output_dir, "processed.wav")
+                Path(output_file).touch()
             return MagicMock(returncode=0, stderr="")
 
         with patch(
@@ -390,6 +471,12 @@ class TestBridgeTempDirectoryCleanup:
         def intercept(cmd, **kw):
             cwd = kw.get("cwd")
             if cwd:
+                # Create output file in temp dir
+                output_dir = os.path.join(cwd, "output")
+                os.makedirs(output_dir, exist_ok=True)
+                output_file = os.path.join(output_dir, "processed.wav")
+                Path(output_file).touch()
+                # Track created dirs
                 for entry in ["input", "output"]:
                     full = os.path.join(cwd, entry)
                     if os.path.exists(full):

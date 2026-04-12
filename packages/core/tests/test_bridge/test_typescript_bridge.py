@@ -95,19 +95,35 @@ def _mock_subprocess_result(returncode=0, stderr=""):
     return MagicMock(returncode=returncode, stderr=stderr)
 
 
+def _mock_subprocess_with_output(cwd: str | None) -> MagicMock:
+    """Create mock subprocess result that also creates output file."""
+    if cwd is None:
+        return _mock_subprocess_result()
+    output_dir = os.path.join(cwd, "output")
+    os.makedirs(output_dir, exist_ok=True)
+    output_file = os.path.join(output_dir, "processed.wav")
+    Path(output_file).touch()
+    return _mock_subprocess_result()
+
+
 class TestTypeScriptBridgeCallAudioEngine:
     """Tests for TypeScriptBridge.call_audio_engine."""
 
     @patch("openmusic.bridge.typescript_bridge.subprocess.run")
     @patch("openmusic.bridge.typescript_bridge.shutil.copy2")
     def test_call_audio_engine_returns_output_path(self, mock_copy2, mock_subprocess):
-        mock_subprocess.return_value = _mock_subprocess_result()
         bridge = TypeScriptBridge(effects_bin="/fake/effects/dist/index.js")
 
         with tempfile.TemporaryDirectory() as tmpdir:
             input_wav = os.path.join(tmpdir, "stem.wav")
             Path(input_wav).touch()
             output_path = os.path.join(tmpdir, "output.wav")
+
+            def capture_run(cmd, **kwargs):
+                cwd = kwargs.get("cwd")
+                return _mock_subprocess_with_output(cwd)
+
+            mock_subprocess.side_effect = capture_run
 
             result = bridge.call_audio_engine(
                 input_files=[input_wav],
@@ -122,7 +138,6 @@ class TestTypeScriptBridgeCallAudioEngine:
     def test_call_audio_engine_spawns_node_with_config(
         self, mock_copy2, mock_subprocess
     ):
-        mock_subprocess.return_value = _mock_subprocess_result()
         bridge = TypeScriptBridge(effects_bin="/fake/effects/dist/index.js")
 
         captured_cmd = None
@@ -132,7 +147,8 @@ class TestTypeScriptBridgeCallAudioEngine:
             nonlocal captured_cmd, captured_cwd
             captured_cmd = cmd
             captured_cwd = kwargs.get("cwd")
-            return _mock_subprocess_result()
+            cwd = kwargs.get("cwd")
+            return _mock_subprocess_with_output(cwd)
 
         mock_subprocess.side_effect = capture_run
 
@@ -155,7 +171,6 @@ class TestTypeScriptBridgeCallAudioEngine:
     @patch("openmusic.bridge.typescript_bridge.subprocess.run")
     @patch("openmusic.bridge.typescript_bridge.shutil.copy2")
     def test_call_audio_engine_writes_config_json(self, mock_copy2, mock_subprocess):
-        mock_subprocess.return_value = _mock_subprocess_result()
         bridge = TypeScriptBridge(effects_bin="/fake/effects/dist/index.js")
 
         captured_config = {}
@@ -164,7 +179,8 @@ class TestTypeScriptBridgeCallAudioEngine:
             config_idx = cmd.index("--config") + 1
             with open(cmd[config_idx]) as f:
                 captured_config.update(json.load(f))
-            return _mock_subprocess_result()
+            cwd = kwargs.get("cwd")
+            return _mock_subprocess_with_output(cwd)
 
         mock_subprocess.side_effect = capture_run
 
@@ -186,7 +202,6 @@ class TestTypeScriptBridgeCallAudioEngine:
     @patch("openmusic.bridge.typescript_bridge.subprocess.run")
     @patch("openmusic.bridge.typescript_bridge.shutil.copy2")
     def test_call_audio_engine_copies_input_stems(self, mock_copy2, mock_subprocess):
-        mock_subprocess.return_value = _mock_subprocess_result()
         bridge = TypeScriptBridge(effects_bin="/fake/effects/dist/index.js")
 
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -196,13 +211,19 @@ class TestTypeScriptBridgeCallAudioEngine:
             Path(stem2).touch()
             output_path = os.path.join(tmpdir, "output.wav")
 
+            def capture_run(cmd, **kwargs):
+                cwd = kwargs.get("cwd")
+                return _mock_subprocess_with_output(cwd)
+
+            mock_subprocess.side_effect = capture_run
+
             bridge.call_audio_engine(
                 input_files=[stem1, stem2],
                 output_path=output_path,
                 config={"bpm": 125},
             )
 
-            assert mock_copy2.call_count == 2
+            assert mock_copy2.call_count == 3  # 2 inputs + 1 output copy
 
     @patch("openmusic.bridge.typescript_bridge.subprocess.run")
     @patch("openmusic.bridge.typescript_bridge.shutil.copy2")
@@ -255,7 +276,6 @@ class TestTypeScriptBridgeCallAudioEngine:
     def test_call_audio_engine_uses_temp_dir_with_prefix(
         self, mock_copy2, mock_subprocess
     ):
-        mock_subprocess.return_value = _mock_subprocess_result()
         bridge = TypeScriptBridge(effects_bin="/fake/effects/dist/index.js")
 
         captured_cwd = None
@@ -263,7 +283,8 @@ class TestTypeScriptBridgeCallAudioEngine:
         def capture_run(cmd, **kwargs):
             nonlocal captured_cwd
             captured_cwd = kwargs.get("cwd")
-            return _mock_subprocess_result()
+            cwd = kwargs.get("cwd")
+            return _mock_subprocess_with_output(cwd)
 
         mock_subprocess.side_effect = capture_run
 
@@ -286,7 +307,6 @@ class TestTypeScriptBridgeCallAudioEngine:
     def test_call_audio_engine_creates_input_and_output_dirs(
         self, mock_copy2, mock_subprocess
     ):
-        mock_subprocess.return_value = _mock_subprocess_result()
         bridge = TypeScriptBridge(effects_bin="/fake/effects/dist/index.js")
 
         created_dirs = []
@@ -296,6 +316,12 @@ class TestTypeScriptBridgeCallAudioEngine:
         def track_makedirs(path, *args, **kwargs):
             created_dirs.append(path)
             return original_makedirs(path, *args, **kwargs)
+
+        def capture_run(cmd, **kwargs):
+            cwd = kwargs.get("cwd")
+            return _mock_subprocess_with_output(cwd)
+
+        mock_subprocess.side_effect = capture_run
 
         with patch("os.makedirs", side_effect=track_makedirs):
             with tempfile.TemporaryDirectory() as tmpdir:
@@ -352,7 +378,6 @@ class TestTypeScriptBridgeDefaultTimeout:
     @patch("openmusic.bridge.typescript_bridge.subprocess.run")
     @patch("openmusic.bridge.typescript_bridge.shutil.copy2")
     def test_call_audio_engine_has_default_timeout(self, mock_copy2, mock_subprocess):
-        mock_subprocess.return_value = _mock_subprocess_result()
         bridge = TypeScriptBridge(effects_bin="/fake/effects/dist/index.js")
 
         captured_timeout = None
@@ -360,7 +385,8 @@ class TestTypeScriptBridgeDefaultTimeout:
         def capture_run(cmd, **kwargs):
             nonlocal captured_timeout
             captured_timeout = kwargs.get("timeout")
-            return _mock_subprocess_result()
+            cwd = kwargs.get("cwd")
+            return _mock_subprocess_with_output(cwd)
 
         mock_subprocess.side_effect = capture_run
 

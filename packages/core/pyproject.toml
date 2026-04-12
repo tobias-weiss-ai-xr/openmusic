@@ -2,18 +2,49 @@
 name = "openmusic-core"
 version = "0.1.0"
 description = "OpenMusic core package for AI-powered dub techno generation"
-requires-python = ">=3.10"
+requires-python = ">=3.12"
 dependencies = ["click>=8.0", "PyYAML>=6.0", "numpy>=1.20", "soundfile>=0.12"]
 
 [project.optional-dependencies]
 dev = ["pytest>=7.0.0", "PyYAML>=6.0"]
+acestep = [
+  "torch==2.10.0+cu128",
+  "torchvision==0.25.0+cu128",
+  "torchaudio==2.10.0+cu128",
+  "transformers>=4.51.0,<4.58.0",
+  "diffusers",
+  "loguru>=0.7.3",
+  "einops>=0.8.1",
+  "accelerate>=1.12.0",
+  "scipy>=1.10.1",
+  "soundfile>=0.13.1",
+  "safetensors>=0.7.0",
+  "numba>=0.63.1",
+  "vector-quantize-pytorch>=1.27.15",
+  "torchcodec>=0.9.1",
+  "torchao",
+  "toml",
+]
 
 [build-system]
-requires = ["setuptools>=61.0"]
-build-backend = "setuptools.build_meta"
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/openmusic"]
 
 [project.scripts]
 openmusic = "openmusic.cli.main:main"
+
+[[tool.uv.index]]
+name = "pytorch-cu128"
+url = "https://download.pytorch.org/whl/cu128"
+explicit = true
+
+[tool.uv.sources]
+torch = { index = "pytorch-cu128", extra = "acestep" }
+torchvision = { index = "pytorch-cu128", extra = "acestep" }
+torchaudio = { index = "pytorch-cu128", extra = "acestep" }
 
 [tool.coverage.run]
 omit = ["*/verify_spectral_masking.py", "*/tests/*"]

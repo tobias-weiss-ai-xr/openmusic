@@ -396,11 +396,14 @@ class YouTubeUpFallback:
             privacy = privacy_map.get(self.config.privacy, PrivacyEnum.PRIVATE)
 
             # Create metadata
+            from youtube_up.metadata import CategoryEnum
+
+            tag_list = tuple(self.config.tags) if self.config.tags else ()
             metadata = Metadata(
                 title=self.config.title,
                 description=self.config.description,
-                tags=self.config.tags,
-                category=self.config.category,
+                tags=tag_list,
+                category=CategoryEnum.MUSIC,
                 privacy=privacy,
             )
 
@@ -410,9 +413,8 @@ class YouTubeUpFallback:
             # Upload video
             logger.info(f"Uploading video using youtube-up fallback...")
             video_id = session.upload(
-                video_path=str(video_file),
+                file_path=str(video_file),
                 metadata=metadata,
-                thumbnail_path=self.config.thumbnail_path,
             )
 
             logger.info(

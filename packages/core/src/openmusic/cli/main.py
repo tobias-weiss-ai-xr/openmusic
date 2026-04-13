@@ -48,6 +48,7 @@ def _build_config_from_flags(
     key: str,
     output: str,
     skip_effects: bool = False,
+    effects_backend: str = "pedalboard",
     generate_cover: bool = False,
     cover_theme: str = "dark_industrial",
 ) -> MixConfig:
@@ -58,6 +59,7 @@ def _build_config_from_flags(
         key=key,
         output_path=output,
         skip_effects=skip_effects,
+        effects_backend=effects_backend,
         generate_cover=generate_cover,
         cover_theme=cover_theme,
     )
@@ -88,6 +90,12 @@ def main():
     help="Bypass effects processing; assemble raw audio segments directly",
 )
 @click.option(
+    "--effects-backend",
+    type=click.Choice(["pedalboard", "typescript", "none"]),
+    default="pedalboard",
+    help="Effects processing backend (default: pedalboard)",
+)
+@click.option(
     "--cover",
     is_flag=True,
     default=False,
@@ -111,6 +119,7 @@ def generate(
     output: str,
     config: Optional[str],
     no_effects: bool,
+    effects_backend: str,
     cover: bool,
     cover_theme: str,
     cover_image: Optional[str],
@@ -139,6 +148,7 @@ def generate(
             key,
             output,
             skip_effects=no_effects,
+            effects_backend=effects_backend,
             generate_cover=generate_cover_flag,
             cover_theme=cover_theme,
         )

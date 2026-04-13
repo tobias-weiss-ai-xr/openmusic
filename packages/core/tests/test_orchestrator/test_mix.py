@@ -149,8 +149,10 @@ class TestMixOrchestratorProcessSegment:
     @patch("openmusic.orchestrator.mix.TypeScriptBridge")
     @patch("openmusic.orchestrator.mix.ACEStepGenerator")
     def test_process_segment_calls_bridge(self, MockGenerator, MockBridge):
-        config = MixConfig()
+        config = MixConfig(effects_backend="typescript")
         mock_bridge = MockBridge.return_value
+        # Ensure the mock doesn't have 'process' method so TypeScript bridge is used
+        delattr(mock_bridge, "process")
 
         orch = MixOrchestrator(config)
 
@@ -180,8 +182,9 @@ class TestMixOrchestratorProcessSegment:
     def test_process_segment_propagates_bridge_error(self, MockGenerator, MockBridge):
         from openmusic.bridge.typescript_bridge import BridgeError
 
-        config = MixConfig()
+        config = MixConfig(effects_backend="typescript")
         mock_bridge = MockBridge.return_value
+        delattr(mock_bridge, "process")
         mock_bridge.call_audio_engine.side_effect = BridgeError(
             "Effects processing failed", stderr="config validation failed"
         )
@@ -196,8 +199,9 @@ class TestMixOrchestratorProcessSegment:
     def test_process_segment_passes_effects_config_to_bridge(
         self, MockGenerator, MockBridge
     ):
-        config = MixConfig()
+        config = MixConfig(effects_backend="typescript")
         mock_bridge = MockBridge.return_value
+        delattr(mock_bridge, "process")
 
         orch = MixOrchestrator(config)
 
@@ -227,8 +231,9 @@ class TestMixOrchestratorProcessSegment:
     def test_process_segment_effects_config_has_full_schema(
         self, MockGenerator, MockBridge
     ):
-        config = MixConfig()
+        config = MixConfig(effects_backend="typescript")
         mock_bridge = MockBridge.return_value
+        delattr(mock_bridge, "process")
 
         orch = MixOrchestrator(config)
 
@@ -279,8 +284,9 @@ class TestMixOrchestratorProcessSegment:
     @patch("openmusic.orchestrator.mix.TypeScriptBridge")
     @patch("openmusic.orchestrator.mix.ACEStepGenerator")
     def test_process_segment_uses_correct_preset(self, MockGenerator, MockBridge):
-        config = MixConfig(effects_preset="club_dub")
+        config = MixConfig(effects_preset="club_dub", effects_backend="typescript")
         mock_bridge = MockBridge.return_value
+        delattr(mock_bridge, "process")
 
         orch = MixOrchestrator(config)
 
@@ -304,7 +310,9 @@ class TestMixOrchestratorProcessSegment:
     @patch("openmusic.orchestrator.mix.TypeScriptBridge")
     @patch("openmusic.orchestrator.mix.ACEStepGenerator")
     def test_process_segment_rejects_unknown_preset(self, MockGenerator, MockBridge):
-        config = MixConfig(effects_preset="nonexistent")
+        config = MixConfig(effects_preset="nonexistent", effects_backend="typescript")
+        mock_bridge = MockBridge.return_value
+        delattr(mock_bridge, "process")
         orch = MixOrchestrator(config)
 
         with pytest.raises(ValueError, match="Unknown effects preset"):
@@ -390,8 +398,9 @@ class TestMixOrchestratorAssembly:
     def test_process_segment_copies_file_from_temp_dir(
         self, MockBridge, MockGenerator, tmp_path: Path
     ) -> None:
-        config = MixConfig(length=60, segment_duration=60)
+        config = MixConfig(length=60, segment_duration=60, effects_backend="typescript")
         mock_bridge = MockBridge.return_value
+        delattr(mock_bridge, "process")
 
         orch = MixOrchestrator(config)
         orch.config.output_path = str(tmp_path / "test_output.wav")
@@ -418,10 +427,14 @@ class TestMixOrchestratorAssembly:
         self, MockBridge, MockGenerator, tmp_path: Path
     ) -> None:
         config = MixConfig(
-            length=120, segment_duration=60, output_path=str(tmp_path / "mix.wav")
+            length=120,
+            segment_duration=60,
+            output_path=str(tmp_path / "mix.wav"),
+            effects_backend="typescript",
         )
         mock_gen = MockGenerator.return_value
         mock_bridge = MockBridge.return_value
+        delattr(mock_bridge, "process")
 
         orch = MixOrchestrator(config)
 

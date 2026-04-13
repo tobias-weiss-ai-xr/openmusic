@@ -139,6 +139,7 @@ class MixConfig:
     segment_duration: float = 180.0
     effects_preset: str = "deep_dub"
     skip_effects: bool = False
+    effects_backend: str = "pedalboard"  # "pedalboard", "typescript", "none"
     generate_cover: bool = False
     cover_theme: str = "dark_industrial"
     cover_title: str = ""
@@ -151,8 +152,29 @@ class MixOrchestrator:
     def __init__(self, config: MixConfig):
         self.config = config
         self.generator = ACEStepGenerator()
-        self.bridge = TypeScriptBridge()
         self.segment_count = math.ceil(config.length / config.segment_duration)
+
+        # Select effects backend
+        if config.skip_effects or config.effects_backend == "none":
+            self._bridge = None
+        elif config.effects_backend == "pedalboard":
+            try:
+                from openmusic.bridge.pedalboard_bridge import PythonDSPBridge
+
+                self._bridge = PythonDSPBridge(
+                    preset=config.effects_preset,
+                    apply_mastering=True,
+                )
+            except ImportError:
+                logger.warning(
+                    "pedalboard not installed, falling back to TypeScript bridge"
+                )
+                self._bridge = TypeScriptBridge()
+        else:
+            self._bridge = TypeScriptBridge()
+
+        # Keep bridge attribute for backward compatibility with tests
+        self.bridge = self._bridge if self._bridge is not None else TypeScriptBridge()
 
     def generate_mix(self) -> Path:
         segments: list[Path] = []
@@ -197,8 +219,8 @@ class MixOrchestrator:
         return _EFFECTS_PRESETS[preset_name]
 
     def _process_segment(self, segment_path: Path) -> Path:
-        if self.config.skip_effects:
-            # Bypass bridge entirely – copy raw WAV to a persistent temp file
+        if self._bridge is None:
+            # No effects - copy raw WAV
             persistent_output = tempfile.NamedTemporaryFile(
                 prefix="openmusic-seg-",
                 suffix=".wav",
@@ -214,6 +236,24 @@ class MixOrchestrator:
                 raise
             return persistent_path
 
+        # Use PythonDSPBridge
+        if hasattr(self._bridge, "process"):
+            persistent_output = tempfile.NamedTemporaryFile(
+                prefix="openmusic-seg-",
+                suffix=".wav",
+                delete=False,
+            )
+            persistent_output.close()
+            persistent_path = Path(persistent_output.name)
+            try:
+                self._bridge.process(str(segment_path), str(persistent_path))
+            except Exception:
+                if persistent_path.exists():
+                    persistent_path.unlink()
+                raise
+            return persistent_path
+
+        # Fallback: TypeScript bridge (existing logic)
         effects = self._get_effects_config()
 
         config = {
@@ -241,7 +281,7 @@ class MixOrchestrator:
         try:
             with tempfile.TemporaryDirectory(prefix="openmusic-out-") as tmpdir:
                 temp_output = Path(tmpdir) / "processed.wav"
-                self.bridge.call_audio_engine(
+                self._bridge.call_audio_engine(
                     input_files=[str(segment_path)],
                     output_path=str(temp_output),
                     config=config,

@@ -306,7 +306,7 @@ class TestBridgeConfigSchema:
         return captured
 
     def test_all_required_keys_present(self, sample_wav: Path) -> None:
-        config = MixConfig(length=60, segment_duration=60)
+        config = MixConfig(length=60, segment_duration=60, effects_backend="typescript")
         orch = MixOrchestrator(config)
         bridge_cfg = self._capture_bridge_config(orch, sample_wav)
 
@@ -314,7 +314,7 @@ class TestBridgeConfigSchema:
         assert not missing, f"Missing keys: {missing}"
 
     def test_effects_block_has_all_five_effects(self, sample_wav: Path) -> None:
-        config = MixConfig(length=60, segment_duration=60)
+        config = MixConfig(length=60, segment_duration=60, effects_backend="typescript")
         orch = MixOrchestrator(config)
         bridge_cfg = self._capture_bridge_config(orch, sample_wav)
 
@@ -337,7 +337,7 @@ class TestBridgeConfigSchema:
         assert "enabled" in effects["reverb"]
 
     def test_effects_block_has_enabled_flags(self, sample_wav: Path) -> None:
-        config = MixConfig(length=60, segment_duration=60)
+        config = MixConfig(length=60, segment_duration=60, effects_backend="typescript")
         orch = MixOrchestrator(config)
         bridge_cfg = self._capture_bridge_config(orch, sample_wav)
 
@@ -348,7 +348,7 @@ class TestBridgeConfigSchema:
             )
 
     def test_pattern_block_has_style_and_variation(self, sample_wav: Path) -> None:
-        config = MixConfig(length=60, segment_duration=60)
+        config = MixConfig(length=60, segment_duration=60, effects_backend="typescript")
         orch = MixOrchestrator(config)
         bridge_cfg = self._capture_bridge_config(orch, sample_wav)
 
@@ -357,7 +357,13 @@ class TestBridgeConfigSchema:
         assert "variation" in pattern
 
     def test_config_reflects_mix_config_values(self, sample_wav: Path) -> None:
-        config = MixConfig(length=60, segment_duration=60, bpm=130, key="Am")
+        config = MixConfig(
+            length=60,
+            segment_duration=60,
+            bpm=130,
+            key="Am",
+            effects_backend="typescript",
+        )
         orch = MixOrchestrator(config)
         bridge_cfg = self._capture_bridge_config(orch, sample_wav)
 

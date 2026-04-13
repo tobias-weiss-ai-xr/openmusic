@@ -36,6 +36,10 @@ youtube = [
   "google-auth-httplib2>=0.1.0",
   "youtube-up>=0.5.0",
 ]
+dsp = [
+  "pedalboard>=0.9.0",
+  "librosa>=0.10.0",
+]
 
 [build-system]
 requires = ["hatchling"]

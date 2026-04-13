@@ -633,6 +633,46 @@ def publish(
     click.echo("\n[OK] Publish complete!")
 
 
+@main.group(help="MCP orchestration commands")
+def mcp():
+    """Control external creative tools via MCP."""
+    pass
+
+
+@mcp.command()
+@click.option("--host", default="127.0.0.1", help="Ableton Live host")
+@click.option("--port", default=11044, type=int, help="Ableton Live port")
+def ableton_status(host: str, port: int):
+    """Check Ableton Live connection status."""
+    from openmusic.mcp.orchestrator import MCPOrchestrator, MCPConfig
+
+    config = MCPConfig(ableton_host=host, ableton_port=port)
+    orch = MCPOrchestrator(config)
+    status = orch.get_ableton_status()
+
+    if status["connected"]:
+        click.echo(f"Ableton Live connected at {host}:{port}")
+    else:
+        click.echo(f"Ableton Live not reachable: {status.get('error', 'unknown')}")
+
+
+@mcp.command()
+@click.option("--host", default="127.0.0.1", help="ComfyUI host")
+@click.option("--port", default=8188, type=int, help="ComfyUI port")
+def comfyui_status(host: str, port: int):
+    """Check ComfyUI connection status."""
+    from openmusic.mcp.orchestrator import MCPOrchestrator, MCPConfig
+
+    config = MCPConfig(comfyui_host=host, comfyui_port=port)
+    orch = MCPOrchestrator(config)
+    status = orch.get_comfyui_status()
+
+    if status["connected"]:
+        click.echo(f"ComfyUI connected at {host}:{port}")
+    else:
+        click.echo(f"ComfyUI not reachable: {status.get('error', 'unknown')}")
+
+
 @click.version_option(version="0.1.0")
 def _noop_version():
     pass

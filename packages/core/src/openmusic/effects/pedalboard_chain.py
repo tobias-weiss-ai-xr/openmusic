@@ -32,7 +32,6 @@ except ImportError:
 PRESETS: dict[str, dict] = {
     "deep_dub": {
         "filter_cutoff_hz": 600.0,
-        "filter_q": 3.0,
         "delay_seconds": 0.375,
         "delay_feedback": 0.5,
         "delay_mix": 0.6,
@@ -47,7 +46,6 @@ PRESETS: dict[str, dict] = {
     },
     "minimal_dub": {
         "filter_cutoff_hz": 900.0,
-        "filter_q": 2.0,
         "delay_seconds": 0.375,
         "delay_feedback": 0.3,
         "delay_mix": 0.35,
@@ -62,7 +60,6 @@ PRESETS: dict[str, dict] = {
     },
     "club_dub": {
         "filter_cutoff_hz": 1000.0,
-        "filter_q": 2.5,
         "delay_seconds": 0.3,
         "delay_feedback": 0.35,
         "delay_mix": 0.4,
@@ -101,9 +98,7 @@ class PedalboardEffectsChain:
         return Pedalboard(
             [
                 HighpassFilter(cutoff_frequency_hz=30.0),
-                LowpassFilter(
-                    cutoff_frequency_hz=p["filter_cutoff_hz"], q=p["filter_q"]
-                ),
+                LowpassFilter(cutoff_frequency_hz=p["filter_cutoff_hz"]),
                 Delay(
                     delay_seconds=p["delay_seconds"],
                     feedback=p["delay_feedback"],

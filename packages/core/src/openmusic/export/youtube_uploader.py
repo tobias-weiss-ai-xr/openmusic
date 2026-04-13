@@ -46,11 +46,11 @@ class YouTubeUploadConfig:
     description: str = ""
     tags: list[str] = field(default_factory=lambda: ["dub techno", "electronic music"])
     category: str = "10"  # Music
-    privacy: str = "private"  # public, private, unlisted
+    privacy: str = "public"  # public, private, unlisted
     made_for_kids: bool = False
     publish_at: str | None = None  # ISO 8601 for premiere
     thumbnail_path: str | None = None
-    playlist_title: str | None = None
+    playlist_title: str | None = "dub odyssee"
     client_secrets_file: str = "client_secrets.json"
     token_file: str = "youtube_token.json"
     cookies_file: str = "cookies.txt"  # For youtube-up fallback
@@ -399,12 +399,25 @@ class YouTubeUpFallback:
             from youtube_up.metadata import CategoryEnum
 
             tag_list = tuple(self.config.tags) if self.config.tags else ()
+
+            # Build playlists list if a playlist title is specified
+            playlists = None
+            if self.config.playlist_title:
+                playlists = [
+                    Playlist(
+                        self.config.playlist_title,
+                        description="Playlist created by OpenMusic",
+                        create_if_title_doesnt_exist=True,
+                    )
+                ]
+
             metadata = Metadata(
                 title=self.config.title,
                 description=self.config.description,
                 tags=tag_list,
                 category=CategoryEnum.MUSIC,
                 privacy=privacy,
+                playlists=playlists,
             )
 
             # Create session from cookies
@@ -420,17 +433,6 @@ class YouTubeUpFallback:
             logger.info(
                 f"Video uploaded successfully (youtube-up): https://youtube.com/watch?v={video_id}"
             )
-
-            # Add to playlist if specified
-            if self.config.playlist_title:
-                try:
-                    playlist = Playlist.from_title(self.config.playlist_title, session)
-                    playlist.add_video(video_id)
-                    logger.info(
-                        f"Video added to playlist: {self.config.playlist_title}"
-                    )
-                except Exception as e:
-                    logger.warning(f"Failed to add video to playlist: {e}")
 
             return video_id
 
@@ -448,6 +450,13 @@ class YouTubeUploader:
 
     def upload(self, video_path: str) -> str:
         """Upload a video with automatic fallback. Returns the video ID."""
+        # Skip API uploader if no client_secrets configured
+        if not self.config.client_secrets_file:
+            logger.info(
+                "No OAuth client_secrets configured, using youtube-up fallback..."
+            )
+            return self.fallback_uploader.upload(video_path)
+
         # Try API uploader first
         try:
             logger.info("Attempting upload via YouTube Data API v3...")
@@ -466,7 +475,7 @@ class YouTubeUploader:
         except QuotaExceededError:
             logger.warning("YouTube API quota exceeded. Falling back to youtube-up...")
 
-        except YouTubeUploadError as e:
+        except (YouTubeUploadError, TypeError, OAuthNotConfiguredError) as e:
             logger.warning(
                 f"YouTube API upload failed ({e}). Falling back to youtube-up..."
             )

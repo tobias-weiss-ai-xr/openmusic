@@ -211,7 +211,7 @@ def version():
 @click.option(
     "--privacy",
     type=click.Choice(["public", "private", "unlisted"]),
-    default="private",
+    default="public",
     help="Privacy status",
 )
 @click.option(
@@ -223,6 +223,7 @@ def version():
 @click.option(
     "--playlist",
     required=False,
+    default="dub odyssee",
     help="Playlist title (creates if not exists)",
 )
 @click.option(
@@ -324,7 +325,7 @@ def upload(
 @click.option(
     "--privacy",
     type=click.Choice(["public", "private", "unlisted"]),
-    default="private",
+    default="public",
     help="Privacy status",
 )
 @click.option(
@@ -336,6 +337,7 @@ def upload(
 @click.option(
     "--playlist",
     required=False,
+    default="dub odyssee",
     help="Playlist title (creates if not exists)",
 )
 @click.option(

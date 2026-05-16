@@ -537,9 +537,16 @@ def publish(
             elif cover_svg.exists():
                 cover_input = str(cover_svg)
             else:
-                raise click.ClickException(
-                    f"Cover art not found. Expected {cover_png} or {cover_svg}"
-                )
+                from openmusic.export.cover_generator import CoverGenerator, MixCoverConfig
+                gen = CoverGenerator(MixCoverConfig(
+                    key=key,
+                    bpm=bpm,
+                    length=seconds,
+                    title=title or Path(output).stem,
+                ))
+                gen.save_svg(str(cover_svg))
+                gen.save_png(str(cover_png))
+                cover_input = str(cover_png)
 
             cmd = [
                 "ffmpeg",

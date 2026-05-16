@@ -19,6 +19,7 @@ from openmusic.export.youtube_uploader import (
     YouTubeUpFallback,
     YouTubeUpNotInstalledError,
 )
+from openmusic.export.cover_generator import CoverGenerator, MixCoverConfig
 
 __all__ = [
     "AudioEncoder",
@@ -37,4 +38,6 @@ __all__ = [
     "QuotaExceededError",
     "OAuthNotConfiguredError",
     "YouTubeUpNotInstalledError",
+    "CoverGenerator",
+    "MixCoverConfig",
 ]

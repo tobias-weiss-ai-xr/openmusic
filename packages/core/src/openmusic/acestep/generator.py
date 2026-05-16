@@ -118,6 +118,11 @@ class ACEStepGenerator:
                 "ACE-Step is not installed. Install it from https://github.com/ace-step/ACE-Step-1.5"
             )
 
+        import os
+
+        if self.device == "cuda":
+            os.environ.setdefault("PYTORCH_CUDA_ALLOC_CONF", "expandable_segments:True,max_split_size_mb:256")
+
         from acestep.handler import AceStepHandler
         from acestep.llm_inference import LLMHandler
         from acestep.inference import (
@@ -126,13 +131,19 @@ class ACEStepGenerator:
             GenerationConfig,
         )
 
+        generation_device = self.device
+        offload_to_cpu = self.device == "cuda"
+        offload_dit_to_cpu = True
+
         dit_handler = AceStepHandler()
         llm_handler = LLMHandler()
 
         dit_handler.initialize_service(
             project_root="ACE-Step-1.5",
             config_path=self.config.model_path,
-            device=self.device,
+            device=generation_device,
+            offload_to_cpu=offload_to_cpu,
+            offload_dit_to_cpu=offload_dit_to_cpu,
         )
 
         ace_params = AceParams(

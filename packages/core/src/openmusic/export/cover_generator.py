@@ -176,8 +176,15 @@ class CoverGenerator:
         Path(path).write_text(self.generate_svg())
 
     def save_png(self, path: str) -> None:
-        import subprocess
-        subprocess.run(
-            ["convert", "-density", "150", f"svg:{self.generate_svg()}", "-colorspace", "sRGB", path],
-            capture_output=True, check=True,
-        )
+        import subprocess, tempfile
+        svg_content = self.generate_svg()
+        with tempfile.NamedTemporaryFile(suffix=".svg", mode="w", delete=False) as f:
+            f.write(svg_content)
+            svg_path = f.name
+        try:
+            subprocess.run(
+                ["magick", "-density", "150", svg_path, "-colorspace", "sRGB", path],
+                capture_output=True, check=True,
+            )
+        finally:
+            Path(svg_path).unlink(missing_ok=True)

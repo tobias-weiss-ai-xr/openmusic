@@ -317,6 +317,18 @@ def upload(
     default="auto",
     help="Image change interval in seconds, or 'auto' to calculate from mix length / image count",
 )
+@click.option(
+    "--bpm-schedule",
+    required=False,
+    default=None,
+    help="Comma-separated per-segment BPM overrides, e.g. '0:125,20:130,40:122'",
+)
+@click.option(
+    "--key-schedule",
+    required=False,
+    default=None,
+    help="Comma-separated per-segment key overrides, e.g. '0:Dm,15:Am,30:F#m'",
+)
 @click.option("--title", default="Dub Techno Mix", help="Video title")
 @click.option("--description", default="", help="Description text")
 @click.option(
@@ -378,6 +390,8 @@ def publish(
     cover_image: Optional[str],
     slideshow_dir: Optional[str],
     slideshow_framerate: str,
+    bpm_schedule: Optional[str],
+    key_schedule: Optional[str],
 ):
     """Generate mix, render MP4 with ffmpeg, and upload to YouTube in one command."""
     click.echo("Starting full publish pipeline...")
@@ -398,6 +412,8 @@ def publish(
             cover_theme=cover_theme,
             cover_title=title,
             cover_artist="OpenMusic",
+            bpm_schedule=bpm_schedule,
+            key_schedule=key_schedule,
         )
         orchestrator = MixOrchestrator(mix_config)
         mix_path = orchestrator.generate_mix()

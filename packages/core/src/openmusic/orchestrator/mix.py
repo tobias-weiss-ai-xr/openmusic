@@ -1,9 +1,11 @@
 import logging
 import math
+import re
 import shutil
 import tempfile
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
+from typing import Optional
 
 import numpy as np
 import soundfile as sf
@@ -12,6 +14,45 @@ from openmusic.acestep import ACEStepGenerator
 from openmusic.bridge.typescript_bridge import TypeScriptBridge
 
 logger = logging.getLogger(__name__)
+
+
+def _parse_schedule(raw: Optional[str], default: int | str) -> list[tuple[int, int | str]]:
+    if not raw or not raw.strip():
+        return []
+    schedule = []
+    for part in raw.split(","):
+        part = part.strip()
+        if not part:
+            continue
+        m = re.match(r"^(\d+):(.+)$", part)
+        if not m:
+            raise ValueError(f"Invalid schedule entry: '{part}'. Use format 'segment:value', e.g. '0:125,20:130'")
+        seg = int(m.group(1))
+        val = m.group(2)
+        if isinstance(default, int):
+            val = int(val)
+        schedule.append((seg, val))
+    return sorted(schedule)
+
+
+def _interpolate_schedule(schedule: list[tuple[int, int | str]], seg_index: int, default: int | str) -> int | str:
+    if not schedule:
+        return default
+    if len(schedule) == 1:
+        return schedule[0][1]
+    if seg_index <= schedule[0][0]:
+        return schedule[0][1]
+    if seg_index >= schedule[-1][0]:
+        return schedule[-1][1]
+    for i in range(len(schedule) - 1):
+        s0, v0 = schedule[i]
+        s1, v1 = schedule[i + 1]
+        if s0 <= seg_index < s1:
+            if isinstance(v0, int) and isinstance(v1, int):
+                t = (seg_index - s0) / (s1 - s0)
+                return round(v0 + (v1 - v0) * t)
+            return v0
+    return schedule[-1][1]
 
 _EFFECTS_PRESETS: dict[str, dict] = {
     "deep_dub": {
@@ -144,6 +185,18 @@ class MixConfig:
     cover_theme: str = "dark_industrial"
     cover_title: str = ""
     cover_artist: str = "OpenMusic"
+    bpm_schedule: Optional[str] = None
+    key_schedule: Optional[str] = None
+
+    def bpm_for_segment(self, index: int) -> int:
+        sched = _parse_schedule(self.bpm_schedule, self.bpm)
+        val = _interpolate_schedule(sched, index, self.bpm)
+        return int(val)
+
+    def key_for_segment(self, index: int) -> str:
+        sched = _parse_schedule(self.key_schedule, self.key)
+        val = _interpolate_schedule(sched, index, self.key)
+        return str(val)
 
 
 class MixOrchestrator:
@@ -180,7 +233,7 @@ class MixOrchestrator:
         segments: list[Path] = []
         for i in range(self.segment_count):
             raw = self._generate_segment(i, self.segment_count)
-            processed = self._process_segment(raw)
+            processed = self._process_segment(raw, i)
             segments.append(processed)
 
         # Assemble all segments into final output
@@ -202,11 +255,13 @@ class MixOrchestrator:
 
     def _generate_segment(self, index: int, total: int) -> Path:
         prompt = self._get_segment_prompt(index, total)
+        seg_bpm = self.config.bpm_for_segment(index)
+        seg_key = self.config.key_for_segment(index)
         return self.generator.generate_texture(
             prompt=prompt,
             duration=int(self.config.segment_duration),
-            bpm=self.config.bpm,
-            key=self.config.key,
+            bpm=seg_bpm,
+            key=seg_key,
         )
 
     def _get_effects_config(self) -> dict:
@@ -218,7 +273,7 @@ class MixOrchestrator:
             )
         return _EFFECTS_PRESETS[preset_name]
 
-    def _process_segment(self, segment_path: Path) -> Path:
+    def _process_segment(self, segment_path: Path, index: int) -> Path:
         if self._bridge is None:
             # No effects - copy raw WAV
             persistent_output = tempfile.NamedTemporaryFile(
@@ -255,13 +310,15 @@ class MixOrchestrator:
 
         # Fallback: TypeScript bridge (existing logic)
         effects = self._get_effects_config()
+        seg_bpm = self.config.bpm_for_segment(index)
+        seg_key = self.config.key_for_segment(index)
 
         config = {
             "sampleRate": 48000,
             "channels": 2,
             "duration": self.config.segment_duration,
-            "bpm": self.config.bpm,
-            "key": self.config.key,
+            "bpm": seg_bpm,
+            "key": seg_key,
             "effects": effects,
             "pattern": {
                 "style": "dub_techno",

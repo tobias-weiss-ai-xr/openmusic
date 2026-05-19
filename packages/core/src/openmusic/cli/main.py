@@ -329,6 +329,12 @@ def upload(
     default=None,
     help="Comma-separated per-segment key overrides, e.g. '0:Dm,15:Am,30:F#m'",
 )
+@click.option(
+    "--effects-modifiers",
+    required=False,
+    default=None,
+    help="Semicolon-separated per-stage effect modifiers, e.g. 'peak-one:+delay/0.2;decay-one:*delay/0.5'",
+)
 @click.option("--title", default="Dub Techno Mix", help="Video title")
 @click.option("--description", default="", help="Description text")
 @click.option(
@@ -392,6 +398,7 @@ def publish(
     slideshow_framerate: str,
     bpm_schedule: Optional[str],
     key_schedule: Optional[str],
+    effects_modifiers: Optional[str],
 ):
     """Generate mix, render MP4 with ffmpeg, and upload to YouTube in one command."""
     click.echo("Starting full publish pipeline...")
@@ -414,6 +421,7 @@ def publish(
             cover_artist="OpenMusic",
             bpm_schedule=bpm_schedule,
             key_schedule=key_schedule,
+            effects_modifiers=effects_modifiers,
         )
         orchestrator = MixOrchestrator(mix_config)
         mix_path = orchestrator.generate_mix()

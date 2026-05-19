@@ -1,11 +1,12 @@
 import logging
 import math
+import random
 import re
 import shutil
 import tempfile
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Optional
+from typing import Dict, List, Optional
 
 import numpy as np
 import soundfile as sf
@@ -53,6 +54,132 @@ def _interpolate_schedule(schedule: list[tuple[int, int | str]], seg_index: int,
                 return round(v0 + (v1 - v0) * t)
             return v0
     return schedule[-1][1]
+
+
+STAGE_BOUNDARIES = [
+    (0.00, "ambient-intro"),
+    (0.10, "early-build"),
+    (0.25, "mid-build"),
+    (0.45, "pre-peak-one"),
+    (0.60, "peak-one"),
+    (0.75, "post-peak"),
+    (0.85, "peak-two"),
+    (1.00, "decay-one"),
+    (1.15, "decay-two"),
+    (1.30, "dissolution"),
+]
+
+
+STAGE_PROMPTS = {
+    "ambient-intro": [
+        "subtle atmospheric texture, barely perceptible rhythm, warm analog haze, "
+        "distant reverb-drenched percussion, hypnotic repetition, minimal groove",
+    ],
+    "early-build": [
+        "subtle percussion emerging, textural layers slowly accumulating, "
+        "rhythmic foundation taking shape, room tones warming, gentle pulse",
+    ],
+    "mid-build": [
+        "driving four-on-the-floor kick, evolving groove, building bass weight, "
+        "percussion interlocking, dynamic tension escalating, hypnotic forward motion",
+    ],
+    "pre-peak-one": [
+        "intense rhythmic drive, peak energy, full harmonic content, "
+        "crushing bass, transilient percussion, maximal presence and impact",
+    ],
+    "peak-one": [
+        "maximum energy and intensity, all elements firing, powerful low-end, "
+        "crystallized rhythm, transcendent momentum, visceral impact",
+    ],
+    "post-peak": [
+        "controlled explosion, sustaining intensity, peak textures held, "
+        "balanced chaos, powerful momentum, peak saturation",
+    ],
+    "peak-two": [
+        "second wind of intensity, renewed energy surge, layered textures, "
+        "punchy transients, high-impact rhythm, sustained drive",
+    ],
+    "decay-one": [
+        "gradual energy release, textures dissolving, rhythm relaxing, "
+        "space opening, bass softening, hypnotic slowdown",
+    ],
+    "decay-two": [
+        "fading into dissolution, minimal elements, echo trails, "
+        "ambient fade, sparse textures, distant and dreamlike",
+    ],
+    "dissolution": [
+        "textural fadeout, echo chamber decay, final breath, "
+        "ambient dissolution, minimal signal, fading into silence",
+    ],
+}
+
+
+def _get_stage_for_segment(segment_index: int, total_segments: int) -> str:
+    if total_segments == 0:
+        return "ambient-intro"
+    position = segment_index / total_segments
+    for threshold, stage in reversed(STAGE_BOUNDARIES):
+        if position >= threshold:
+            return stage
+    return "ambient-intro"
+
+
+def _parse_effects_modifiers(modifiers_str: Optional[str]) -> Dict[str, List[tuple]]:
+    if not modifiers_str:
+        return {}
+    result = {}
+    for modifier in modifiers_str.split(";"):
+        if ":" not in modifier:
+            continue
+        stage_part, param_part = modifier.split(":", 1)
+        stage = stage_part.strip()
+        if stage not in result:
+            result[stage] = []
+        for param_mod in param_part.split(","):
+            param_mod = param_mod.strip()
+            if not param_mod:
+                continue
+            op_idx = max(param_mod.find("+"), param_mod.find("-"),
+                        param_mod.find("*"), param_mod.find("/"))
+            if op_idx <= 0:
+                continue
+            op = param_mod[op_idx]
+            param = param_mod[:op_idx].strip()
+            value = param_mod[op_idx+1:].strip()
+            try:
+                val = float(value) if "." in value else int(value)
+            except ValueError:
+                continue
+            result[stage].append((param, op, val))
+    return result
+
+
+def interpolate_effects(base_preset: dict, modifiers: Dict[str, List[tuple]],
+                       stage_id: str, segment_position: float) -> dict:
+    import copy
+    result = copy.deepcopy(base_preset)
+    if stage_id in modifiers:
+        for param, op, value in modifiers[stage_id]:
+            if param not in result or not isinstance(result[param], dict):
+                continue
+            if op == "+":
+                for k in result[param]:
+                    if isinstance(result[param][k], (int, float)):
+                        result[param][k] += value
+            elif op == "-":
+                for k in result[param]:
+                    if isinstance(result[param][k], (int, float)):
+                        result[param][k] -= value
+            elif op == "*":
+                for k in result[param]:
+                    if isinstance(result[param][k], (int, float)):
+                        result[param][k] *= value
+            elif op == "/":
+                for k in result[param]:
+                    if isinstance(result[param][k], (int, float)) and value != 0:
+                        result[param][k] /= value
+    return result
+
 
 _EFFECTS_PRESETS: dict[str, dict] = {
     "deep_dub": {
@@ -181,6 +308,7 @@ class MixConfig:
     effects_preset: str = "deep_dub"
     skip_effects: bool = False
     effects_backend: str = "pedalboard"  # "pedalboard", "typescript", "none"
+    effects_modifiers: Optional[str] = None
     generate_cover: bool = False
     cover_theme: str = "dark_industrial"
     cover_title: str = ""
@@ -233,7 +361,7 @@ class MixOrchestrator:
         segments: list[Path] = []
         for i in range(self.segment_count):
             raw = self._generate_segment(i, self.segment_count)
-            processed = self._process_segment(raw, i)
+            processed = self._process_segment(raw, i, self.segment_count)
             segments.append(processed)
 
         # Assemble all segments into final output
@@ -254,7 +382,8 @@ class MixOrchestrator:
         return Path(self.config.output_path)
 
     def _generate_segment(self, index: int, total: int) -> Path:
-        prompt = self._get_segment_prompt(index, total)
+        stage_id = _get_stage_for_segment(index, total)
+        prompt = self._get_segment_prompt(index, total, stage_id=stage_id)
         seg_bpm = self.config.bpm_for_segment(index)
         seg_key = self.config.key_for_segment(index)
         return self.generator.generate_texture(
@@ -273,7 +402,7 @@ class MixOrchestrator:
             )
         return _EFFECTS_PRESETS[preset_name]
 
-    def _process_segment(self, segment_path: Path, index: int) -> Path:
+    def _process_segment(self, segment_path: Path, index: int, total: int) -> Path:
         if self._bridge is None:
             # No effects - copy raw WAV
             persistent_output = tempfile.NamedTemporaryFile(
@@ -309,9 +438,16 @@ class MixOrchestrator:
             return persistent_path
 
         # Fallback: TypeScript bridge (existing logic)
-        effects = self._get_effects_config()
+        base_effects = self._get_effects_config()
         seg_bpm = self.config.bpm_for_segment(index)
         seg_key = self.config.key_for_segment(index)
+        stage_id = _get_stage_for_segment(index, total)
+        if self.config.effects_modifiers:
+            modifiers = _parse_effects_modifiers(self.config.effects_modifiers)
+            segment_pos = index / max(total - 1, 1)
+            effects = interpolate_effects(base_effects, modifiers, stage_id, segment_pos)
+        else:
+            effects = base_effects
 
         config = {
             "sampleRate": 48000,
@@ -458,32 +594,20 @@ class MixOrchestrator:
         sf.write(str(output_path), combined, sample_rate, format=format_str)
         logger.info(f"Mix written to {output_path}")
 
-    def _get_segment_prompt(self, index: int, total: int) -> str:
-        position = index / max(total - 1, 1)
+    def _get_segment_prompt(
+        self,
+        index: int,
+        total: int,
+        stage_id: Optional[str] = None,
+    ) -> str:
+        if stage_id is None:
+            stage_id = _get_stage_for_segment(index, total)
 
-        if position <= 0.2:
-            intensity = "subtle" if position < 0.1 else "building"
-            return (
-                f"dub techno intro with {intensity} atmosphere, "
-                f"deep bass, sparse percussion, ambient pads in {self.config.key}, "
-                f"{self.config.bpm} BPM"
-            )
-
-        if position >= 0.8:
-            if position >= 0.95:
-                return (
-                    f"dub techno outro fading out, dissolving textures, "
-                    f"reverb tails in {self.config.key}, {self.config.bpm} BPM"
-                )
-            return (
-                f"dub techno climax with intense rhythmic drive, "
-                f"heavy dub chords, thick reverb in {self.config.key}, "
-                f"{self.config.bpm} BPM"
-            )
+        stage_prompts = STAGE_PROMPTS.get(stage_id, STAGE_PROMPTS["decay-one"])
+        prompt_base = random.choice(stage_prompts)
 
         return (
-            f"dub techno with evolving groove, deep bass lines, "
-            f"dub chords with delay and reverb, hypnotic rhythm in {self.config.key}, "
+            f"dub techno, {prompt_base} in {self.config.key}, "
             f"{self.config.bpm} BPM"
         )
 

@@ -709,6 +709,12 @@ def comfyui_status(host: str, port: int):
 
 @main.command("publish-video")
 @click.option(
+    "--audio",
+    type=click.Path(exists=True, dir_okay=False),
+    required=False,
+    help="Path to existing audio file (FLAC/WAV) - skips audio generation",
+)
+@click.option(
     "--config",
     type=click.Path(exists=True, dir_okay=False),
     required=False,
@@ -747,6 +753,7 @@ def comfyui_status(host: str, port: int):
     help="YouTube playlist to add to",
 )
 def publish_video(
+    audio: Optional[str],
     config: Optional[str],
     output: str,
     sdxl_model: str,
@@ -770,11 +777,14 @@ def publish_video(
 
         seconds = _parse_length_to_seconds(length)
 
+        audio_path = Path(audio) if audio else None
+
         graph_config = {
             "length": seconds,
             "bpm": bpm,
             "key": key,
             "output_path": output,
+            "audio_path": audio_path,
         }
 
         click.echo("Starting video pipeline...")

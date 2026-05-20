@@ -21,6 +21,8 @@ def generate_all_audio_segments(state: VideoPipelineState) -> Dict[str, Any]:
     Wraps existing ACEStepGenerator to produce audio segments across
     the full mix length, capturing stage timings for parallel image dispatch.
 
+    If audio_path is provided in config, skips generation and uses the existing file.
+
     Args:
         state: VideoPipelineState with config
 
@@ -28,6 +30,26 @@ def generate_all_audio_segments(state: VideoPipelineState) -> Dict[str, Any]:
         State updates: audio_paths, stage_timings, stage_prompts
     """
     config = state["config"]
+    audio_path_source = config.get("audio_path")
+
+    # Skip generation if audio_path is provided
+    if audio_path_source:
+        logger.info(f"Using existing audio: {audio_path_source}")
+        audio_existing = Path(audio_path_source)
+        if not audio_existing.exists():
+            raise FileNotFoundError(f"Audio file not found: {audio_path_source}")
+
+        # Set stage timings and prompts for the existing audio
+        total_length = config.get("length", 3600.0)
+        stage_timings = _compute_stage_timings(total_length)
+
+        return {
+            "audio_paths": [audio_existing],  # Single audio file
+            "stage_timings": stage_timings,
+            "stage_prompts": {stage: prompts[0] for stage, prompts in STAGE_PROMPTS.items()},
+        }
+
+    # Generate new audio segments
     segment_duration = config.get("segment_duration", 180.0)
     total_length = config.get("length", 3600.0)
 

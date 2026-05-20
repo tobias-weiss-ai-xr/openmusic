@@ -5,6 +5,8 @@ __pycache__/
 *.wav
 *.flac
 *.mp3
+*.mp4
+*.mov
 .DS_Store
 dist/
 *.egg-info/
@@ -12,3 +14,4 @@ dist/
 ACE-Step-1.5/
 poc/
 *.egg-info/
+.cache/openmusic/

@@ -2,9 +2,8 @@
 
 import asyncio
 from pathlib import Path
+from operator import or_, add
 from typing import Annotated, Dict, List, Optional, Tuple, TypedDict
-
-from operator import add
 
 
 def _dict_merge(left: dict, right: dict) -> dict:
@@ -27,8 +26,11 @@ class VideoPipelineState(TypedDict):
 
     # Audio
     audio_paths: List[Path]
-    stage_timings: List[Tuple[float, float, str]]
+    stage_timings: Dict[str, Dict[str, float]]
     audio_with_automation: Optional[Path]
+
+    # Stage metadata
+    stage_prompts: Annotated[Dict[str, str], or_]
 
     # Visuals
     image_paths: Annotated[Dict[str, Optional[Path]], _dict_merge]
@@ -62,8 +64,9 @@ def initialize_video_pipeline_state(
         confirm_upload=confirm_upload,
         playlist_id=playlist_id,
         audio_paths=[],
-        stage_timings=[],
+        stage_timings={},
         audio_with_automation=None,
+        stage_prompts={},
         image_paths={},
         final_video=None,
         youtube_url=None,

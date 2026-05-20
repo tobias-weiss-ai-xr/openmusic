@@ -69,12 +69,18 @@ async def generate_image_for_stage(state: VideoPipelineState) -> Dict[str, Any]:
     output_dir.mkdir(parents=True, exist_ok=True)
     output_path = output_dir / f"{stage_name}.png"
 
-    async with state["gpu_semaphore"]:
+    gpu_semaphore = state.get("gpu_semaphore")
+    if not gpu_semaphore:
+        # Fallback: create a new semaphore for this task
+        max_concurrent = state.get("max_concurrent_images", 2)
+        gpu_semaphore = asyncio.Semaphore(max_concurrent)
+
+    async with gpu_semaphore:
         try:
             await asyncio.to_thread(
                 _run_sdxl_generation,
                 full_prompt,
-                state["sdxl_model_path"],
+                state.get("sdxl_model_path", "stabilityai/sdxl-turbo"),
                 output_path,
             )
             image_path = output_path

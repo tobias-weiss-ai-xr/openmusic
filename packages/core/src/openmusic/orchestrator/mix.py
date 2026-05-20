@@ -16,6 +16,15 @@ from openmusic.bridge.typescript_bridge import TypeScriptBridge
 
 logger = logging.getLogger(__name__)
 
+__all__ = [
+    "MixConfig",
+    "MixOrchestrator",
+    "STAGE_BOUNDARIES",
+    "STAGE_PROMPTS",
+    "_get_stage_for_segment",
+    "_compute_stage_timings",
+]
+
 
 def _parse_schedule(raw: Optional[str], default: int | str) -> list[tuple[int, int | str]]:
     if not raw or not raw.strip():
@@ -122,6 +131,32 @@ def _get_stage_for_segment(segment_index: int, total_segments: int) -> str:
         if position >= threshold:
             return stage
     return "ambient-intro"
+
+
+def _compute_stage_timings(total_duration: float) -> list[tuple[float, float, str]]:
+    """Compute (start, end, stage_name) timestamps for each stage.
+
+    Args:
+        total_duration: Total mix duration in seconds
+
+    Returns:
+        List of tuples: [(start_time, end_time, stage_name), ...]
+    """
+    timings = []
+    prev_time = 0.0
+
+    for i, (boundary, stage) in enumerate(STAGE_BOUNDARIES):
+        if i == 0:
+            continue  # ambient-intro starts at 0
+
+        start_time = prev_time
+        end_time = total_duration * boundary
+        prev_stage_name = STAGE_BOUNDARIES[i-1][1]
+
+        timings.append((start_time, end_time, prev_stage_name))
+        prev_time = end_time
+
+    return timings
 
 
 def _parse_effects_modifiers(modifiers_str: Optional[str]) -> Dict[str, List[tuple]]:

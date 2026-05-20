@@ -7,6 +7,13 @@ from typing import Annotated, Dict, List, Optional, Tuple, TypedDict
 from operator import add
 
 
+def _dict_merge(left: dict, right: dict) -> dict:
+    """Merge two dicts - for LangGraph parallel node dict updates."""
+    result = left.copy()
+    result.update(right)
+    return result
+
+
 class VideoPipelineState(TypedDict):
     """Shared state object for all LangGraph nodes in video pipeline."""
 
@@ -24,7 +31,7 @@ class VideoPipelineState(TypedDict):
     audio_with_automation: Optional[Path]
 
     # Visuals
-    image_paths: Annotated[Dict[str, Optional[Path]], "replace"]
+    image_paths: Annotated[Dict[str, Optional[Path]], _dict_merge]
 
     # Output
     final_video: Optional[Path]

@@ -14,6 +14,7 @@ from openmusic.export.youtube_uploader import (
     YouTubeUploadConfig,
     YouTubeUploadError,
 )
+from openmusic.video import build_video_pipeline_graph
 
 
 def _parse_length_to_seconds(length: str) -> float:
@@ -704,6 +705,109 @@ def comfyui_status(host: str, port: int):
         click.echo(f"ComfyUI connected at {host}:{port}")
     else:
         click.echo(f"ComfyUI not reachable: {status.get('error', 'unknown')}")
+
+
+@main.command("publish-video")
+@click.option(
+    "--config",
+    type=click.Path(exists=True, dir_okay=False),
+    required=False,
+    help="Path to a YAML config file",
+)
+@click.option(
+    "--output",
+    default="final_video.mp4",
+    help="Output video path",
+)
+@click.option(
+    "--sdxl-model",
+    default="stabilityai/sdxl-turbo",
+    help="HuggingFace SDXL model ID or local path",
+)
+@click.option(
+    "--max-concurrent-images",
+    default=2,
+    type=int,
+    help="Max parallel image generation tasks",
+)
+@click.option(
+    "--crossfade-duration",
+    default=30,
+    type=int,
+    help="Stage transition duration in seconds",
+)
+@click.option(
+    "--confirm-upload/--no-confirm-upload",
+    default=True,
+    help="Interactive upload confirmation",
+)
+@click.option(
+    "--playlist-id",
+    default="Dub Odyssee",
+    help="YouTube playlist to add to",
+)
+def publish_video(
+    config: Optional[str],
+    output: str,
+    sdxl_model: str,
+    max_concurrent_images: int,
+    crossfade_duration: int,
+    confirm_upload: bool,
+    playlist_id: str,
+):
+    """Generate enhanced video with AI imagery and upload to YouTube."""
+    try:
+        length = "1h"
+        bpm = 125
+        key = "Dm"
+
+        if config:
+            with open(config, "r") as f:
+                cfg = yaml.safe_load(f) or {}
+            length = str(cfg.get("length", length))
+            bpm = int(cfg.get("bpm", bpm))
+            key = str(cfg.get("key", key))
+
+        seconds = _parse_length_to_seconds(length)
+
+        graph_config = {
+            "length": seconds,
+            "bpm": bpm,
+            "key": key,
+            "output_path": output,
+        }
+
+        click.echo("Starting video pipeline...")
+
+        graph = build_video_pipeline_graph(
+            graph_config,
+            sdxl_model_path=sdxl_model,
+            max_concurrent_images=max_concurrent_images,
+            crossfade_duration=crossfade_duration,
+            confirm_upload=confirm_upload,
+            playlist_id=playlist_id,
+        )
+
+        import asyncio
+
+        final_state = None
+
+        async def run_pipeline():
+            nonlocal final_state
+            async for update in graph.astream(None):
+                final_state = update
+
+        asyncio.run(run_pipeline())
+
+        if final_state and final_state.get("youtube_url"):
+            click.echo(f"Video uploaded: {final_state['youtube_url']}")
+        elif final_state and final_state.get("final_video"):
+            click.echo(f"Video generated: {final_state['final_video']}")
+        else:
+            click.echo("Pipeline completed but no video produced")
+
+    except Exception as e:
+        raise click.ClickException(str(e))
 
 
 @click.version_option(version="0.1.0")

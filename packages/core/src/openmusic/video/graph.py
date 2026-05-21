@@ -10,6 +10,7 @@ from openmusic.video.utils.stage_timing import STAGE_PROMPTS
 from openmusic.video.nodes import (
     generate_all_audio_segments,
     generate_image_for_stage,
+    generate_svg_image_for_stage,
     apply_per_stage_audio_automation,
     render_video_with_crossfades,
     upload_to_youtube,

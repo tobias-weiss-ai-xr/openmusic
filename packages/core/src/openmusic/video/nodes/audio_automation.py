@@ -113,6 +113,55 @@ def _apply_formant_filter(audio: np.ndarray, sr: int, center_freq: float, q: flo
     return filtered
 
 
+def _get_key_harmonics(key: str) -> Dict[str, float]:
+    """Extract harmonic frequencies for the given key.
+
+    For D minor: D (root), F (minor third), A (perfect fifth)
+
+    Args:
+        key: Musical key (e.g., "Dm", "C", "F#")
+
+    Returns:
+        Dictionary of harmonic frequencies in Hz
+    """
+    key_harmonics = {
+        "Dm": {"root": 146.83, "third": 174.61, "fifth": 220.00},  # D3, F3, A3
+        "C": {"root": 130.81, "third": 164.81, "fifth": 196.00},  # C3, E3, G3
+        "Eb": {"root": 155.56, "third": 185.00, "fifth": 233.08},  # Eb3, G3, Bb3
+        "G": {"root": 196.00, "third": 246.94, "fifth": 293.66},  # G3, B3, D4
+        "A": {"root": 220.00, "third": 261.63, "fifth": 329.63},  # A3, C4, E4
+        "F": {"root": 174.61, "third": 220.00, "fifth": 261.63},  # F3, A3, C4
+    }
+
+    return key_harmonics.get(key, key_harmonics["Dm"])
+
+
+def _apply_harmonic_resonance(audio: np.ndarray, sr: int, frequencies: list, q: float = 8.0, gain_db: float = 2) -> np.ndarray:
+    """Apply resonance at specific harmonic frequencies to emphasize chord tones.
+
+    Creates a harmonic "color" by emphasizing the fundamental chord tones
+    of the key to enhance musical coherence.
+
+    Args:
+        audio: Input audio (stereo)
+        sr: Sample rate
+        frequencies: List of harmonic frequencies to emphasize in Hz
+        q: Q factor for narrow bandpass filters
+        gain_db: Gain to apply to resonances
+
+    Returns:
+        Audio with harmonic resonance
+    """
+    result = audio.copy()
+
+    for freq in frequencies:
+        board = pedalboard.Pedalboard()
+        board.append(pedalboard.PeakFilter(cutoff_frequency_hz=freq, gain_db=gain_db, q=q))
+        result = board(result, sr)
+
+    return result
+
+
 def _apply_stage_modifications(
     audio: np.ndarray,
     sr: int,
@@ -120,10 +169,13 @@ def _apply_stage_modifications(
     key: str = "Dm",
     bpm: int = 125,
 ) -> np.ndarray:
-    """Apply stage-specific audio effects with advanced sound design.
+    """Apply stage-specific audio effects with music theory integration.
 
-    Professional mastering chain with transient shaping, sidechain pumping,
-    formant filtering, and multi-band dynamics per harmonic progression stage.
+    Professional mastering with:
+    - Harmonic resonance at key chord tones (root, third, fifth)
+    - Chord progression alignment (Dm → F → Cm → Gm → Bb → Dm)
+    - Harmonic rhythm (slow ambient, fast build, complex peaks)
+    - Transient shaping, sidechain pumping, formant filtering
 
     Args:
         audio: Audio segment (stereo)
@@ -135,72 +187,129 @@ def _apply_stage_modifications(
     Returns:
         Processed audio segment
     """
+    # Get key harmonics for harmonic resonance
+    harmonics = _get_key_harmonics(key)
+    chord_tones = [harmonics["root"], harmonics["third"], harmonics["fifth"]]
+
     board = pedalboard.Pedalboard()
 
+    # Chord progression map for D minor: Dm → F → Cm → Gm → Bb → Dm
+    # Each stage emphasizes different chord tones
+    chord_progression = {
+        "ambient-intro": "Dm",      # Root emphasis
+        "early-build": "F",         # Third key (F major)
+        "mid-build": "Dm",          # Return to tonic
+        "pre-peak-one": "Cm",       # Relative minor
+        "peak-one": "Gm",           # Dominant minor
+        "peak-two": "Bb",           # Subdominant major
+        "post-peak": "Dm",         # Tonic resolution
+        "decay-one": "F",           # Submediant
+        "decay-two": "Dm",         # Tonic
+        "dissolution": "Dm",        # Final tonic
+    }
+
+    current_chord = chord_progression.get(stage, "Dm")
+
+    # Stage effects based on chord progression and harmonic rhythm
     if stage == "ambient-intro":
-        board.append(pedalboard.LowpassFilter(cutoff_frequency_hz=350))
-        board.append(pedalboard.Reverb(wet_level=0.5, decay_seconds=5.0))
-        board.append(pedalboard.Limiter(limit_db=-6.0))
+        # Slow harmonic rhythm, root emphasis (D: 146.83 Hz, F: 174.61 Hz, A: 220.00 Hz)
+        board.append(pedalboard.PeakFilter(cutoff_frequency_hz=146.83, gain_db=4, q=6.0))
+        board.append(pedalboard.PeakFilter(cutoff_frequency_hz=220.00, gain_db=3, q=5.0))
+        board.append(pedalboard.LowpassFilter(cutoff_frequency_hz=400))
+        board.append(pedalboard.Reverb(room_size=0.9, wet_level=0.6, dry_level=0.4))
+        board.append(pedalboard.Limiter(threshold_db=-5.0))
 
     elif stage == "early-build":
-        board.append(pedalboard.HighpassFilter(cutoff_frequency_hz=35))
-        board.append(pedalboard.PeakFilter(peak_frequency_hz=800, gain_db=2.5, q=1.2))
-        board.append(pedalboard.Compressor(threshold_db=-14, ratio=2.5))
-        board.append(pedalboard.Reverb(wet_level=0.25))
+        # Faster harmonic rhythm, F chord emphasis (F: 174.61 Hz, A: 220.00 Hz, C: 261.63 Hz)
+        board.append(pedalboard.PeakFilter(cutoff_frequency_hz=174.61, gain_db=5, q=5.0))
+        board.append(pedalboard.PeakFilter(cutoff_frequency_hz=261.63, gain_db=3, q=6.0))
+        board.append(pedalboard.HighpassFilter(cutoff_frequency_hz=40))
+        board.append(pedalboard.Compressor(threshold_db=-15, ratio=2.0))
+        board.append(pedalboard.Reverb(room_size=0.4, wet_level=0.3, dry_level=0.7))
 
     elif stage == "mid-build":
-        board.append(pedalboard.HighpassFilter(cutoff_frequency_hz=45))
-        board.append(pedalboard.PeakFilter(peak_frequency_hz=1400, gain_db=4, q=0.6))
-        board.append(pedalboard.Compressor(threshold_db=-16, ratio=3.0))
+        # Dm chord with rising energy (D: 146.83 Hz, F: 174.61 Hz, A: 220.00 Hz)
+        board.append(pedalboard.PeakFilter(cutoff_frequency_hz=146.83, gain_db=6, q=5.0))
+        board.append(pedalboard.PeakFilter(cutoff_frequency_hz=293.66, gain_db=3, q=4.0))
+        board.append(pedalboard.HighpassFilter(cutoff_frequency_hz=50))
+        board.append(pedalboard.Compressor(threshold_db=-18, ratio=3.0))
 
     elif stage == "pre-peak-one":
-        board.append(pedalboard.LowShelfFilter(gain_db=4, cutoff_frequency_hz=130))
-        board.append(pedalboard.HighpassFilter(cutoff_frequency_hz=70))
-        board.append(pedalboard.PeakFilter(peak_frequency_hz=500, gain_db=-2, q=2.0))
-        board.append(pedalboard.Bitcrush(bit_depth=14))
-        board.append(pedalboard.Compressor(threshold_db=-18, ratio=3.5))
+        # Cm chord tension (C: 130.81 Hz, Eb: 155.56 Hz, G: 196.00 Hz)
+        board.append(pedalboard.LowShelfFilter(gain_db=5, cutoff_frequency_hz=130.81))
+        board.append(pedalboard.PeakFilter(cutoff_frequency_hz=155.56, gain_db=4, q=5.0))
+        board.append(pedalboard.PeakFilter(cutoff_frequency_hz=392.00, gain_db=3, q=4.0))
+        board.append(pedalboard.Bitcrush(bit_depth=13))
+        board.append(pedalboard.Compressor(threshold_db=-20, ratio=4.0))
 
     elif stage == "peak-one":
-        board.append(pedalboard.LowShelfFilter(gain_db=8, cutoff_frequency_hz=90))
-        board.append(pedalboard.HighpassFilter(cutoff_frequency_hz=90))
-        board.append(pedalboard.PeakFilter(peak_frequency_hz=150, gain_db=3, q=1.5))
-        board.append(pedalboard.Distortion(drive_db=15))
-        board.append(pedalboard.Compressor(threshold_db=-26, ratio=6.0))
-        board.append(pedalboard.Tanh())
+        # Gm dominant tension (G: 196.00 Hz, Bb: 233.08 Hz, D: 293.66 Hz)
+        board.append(pedalboard.LowShelfFilter(gain_db=8, cutoff_frequency_hz=196.00))
+        board.append(pedalboard.PeakFilter(cutoff_frequency_hz=233.08, gain_db=5, q=4.5))
+        board.append(pedalboard.PeakFilter(cutoff_frequency_hz=293.66, gain_db=4, q=5.0))
+        board.append(pedalboard.Distortion(drive_db=18))
+        board.append(pedalboard.Compressor(threshold_db=-28, ratio=7.0))
 
     elif stage == "peak-two":
-        board.append(pedalboard.LowShelfFilter(gain_db=6, cutoff_frequency_hz=105))
-        board.append(pedalboard.PeakFilter(peak_frequency_hz=2200, gain_db=5, q=1.0))
-        board.append(pedalboard.PeakFilter(peak_frequency_hz=120, gain_db=2, q=2.0))
-        board.append(pedalboard.Saturation(drive_db=22))
-        board.append(pedalboard.Compressor(threshold_db=-24, ratio=5.0))
+        # Bb subdominant resolution (Bb: 233.08 Hz, D: 293.66 Hz, F: 349.23 Hz)
+        board.append(pedalboard.LowShelfFilter(gain_db=6, cutoff_frequency_hz=233.08))
+        board.append(pedalboard.PeakFilter(cutoff_frequency_hz=349.23, gain_db=4, q=4.0))
+        board.append(pedalboard.PeakFilter(cutoff_frequency_hz=196.00, gain_db=2, q=3.0))
+        board.append(pedalboard.Distortion(drive_db=25))
+        board.append(pedalboard.Compressor(threshold_db=-26, ratio=6.0))
 
     elif stage == "post-peak":
-        board.append(pedalboard.LowpassFilter(cutoff_frequency_hz=7000))
-        board.append(pedalboard.BiquadFilter(cutoff_frequency_hz=220, gain_db=-4))
-        board.append(pedalboard.Delay(delay_seconds=0.125, feedback=0.35))
-        board.append(pedalboard.Compressor(threshold_db=-14, ratio=3.0))
+        # Dm tonic resolution (D: 146.83 Hz, F: 174.61 Hz, A: 220.00 Hz)
+        board.append(pedalboard.PeakFilter(cutoff_frequency_hz=146.83, gain_db=5, q=6.0))
+        board.append(pedalboard.PeakFilter(cutoff_frequency_hz=293.66, gain_db=2, q=5.0))
+        board.append(pedalboard.LowpassFilter(cutoff_frequency_hz=6500))
+        board.append(pedalboard.Delay(delay_seconds=0.16, feedback=0.4))
+        board.append(pedalboard.Compressor(threshold_db=-16, ratio=3.0))
 
     elif stage == "decay-one":
-        board.append(pedalboard.LowpassFilter(cutoff_frequency_hz=1800))
-        board.append(pedalboard.PeakFilter(peak_frequency_hz=800, gain_db=-3, q=1.8))
-        board.append(pedalboard.Reverb(wet_level=0.65, decay_seconds=4.0))
-        board.append(pedalboard.Compressor(threshold_db=-10, ratio=2.0))
+        # F subdominant calm (F: 174.61 Hz, A: 220.00 Hz, C: 261.63 Hz)
+        board.append(pedalboard.PeakFilter(cutoff_frequency_hz=174.61, gain_db=4, q=5.0))
+        board.append(pedalboard.PeakFilter(cutoff_frequency_hz=261.63, gain_db=2, q=4.0))
+        board.append(pedalboard.LowpassFilter(cutoff_frequency_hz=1500))
+        board.append(pedalboard.Reverb(room_size=0.6, wet_level=0.7, dry_level=0.3))
+        board.append(pedalboard.Compressor(threshold_db=-12, ratio=2.0))
 
     elif stage == "decay-two":
-        board.append(pedalboard.LowpassFilter(cutoff_frequency_hz=700))
-        board.append(pedalboard.PeakFilter(peak_frequency_hz=400, gain_db=-5, q=2.5))
-        board.append(pedalboard.Reverb(wet_level=0.8, decay_seconds=6.0))
-        board.append(pedalboard.Delay(delay_seconds=0.3, feedback=0.5))
-        board.append(pedalboard.Limiter(limit_db=-9.0))
+        # Dm return to tonic (D: 146.83 Hz, F: 174.61 Hz, A: 220.00 Hz)
+        board.append(pedalboard.PeakFilter(cutoff_frequency_hz=146.83, gain_db=3, q=7.0))
+        board.append(pedalboard.PeakFilter(cutoff_frequency_hz=220.00, gain_db=2, q=6.0))
+        board.append(pedalboard.LowpassFilter(cutoff_frequency_hz=600))
+        board.append(pedalboard.Reverb(room_size=0.9, wet_level=0.85, dry_level=0.15))
+        board.append(pedalboard.Delay(delay_seconds=0.35, feedback=0.55))
+        board.append(pedalboard.Limiter(threshold_db=-8.0))
 
     elif stage == "dissolution":
-        board.append(pedalboard.LowpassFilter(cutoff_frequency_hz=300))
-        board.append(pedalboard.Reverb(wet_level=0.9, decay_seconds=10.0))
-        board.append(pedalboard.Limiter(limit_db=-15.0))
+        # Final Dm dissolution - all energies converging
+        board.append(pedalboard.PeakFilter(cutoff_frequency_hz=146.83, gain_db=2, q=8.0))
+        board.append(pedalboard.LowpassFilter(cutoff_frequency_hz=250))
+        board.append(pedalboard.Reverb(room_size=1.0, wet_level=1.0, dry_level=0.0))
+        board.append(pedalboard.Limiter(threshold_db=-18.0))
 
-    # After pedalboard chain, apply additional processing
-    processed = board(audio, sr)
+    # After pedalboard chain, apply harmonic resonance for chord tonality
+
+    # Apply harmonic resonance at current chord's fundamental tones
+    current_chord_harmonics = _get_key_harmonics(key)
+
+    # Map chord to its fundamental tones for resonance
+    chord_fundamentals = {
+        "Dm": [current_chord_harmonics["root"], current_chord_harmonics["third"], current_chord_harmonics["fifth"]],  # D, F, A
+        "F": [174.61, 220.00, 261.63, 349.23],  # F, A, C, F4
+        "Cm": [130.81, 155.56, 196.00, 392.00],  # C, Eb, G, G4
+        "Gm": [196.00, 233.08, 293.66],  # G, Bb, D
+        "Bb": [233.08, 293.66, 349.23],  # Bb, D, F
+        "C": [130.81, 164.81, 196.00],  # C, E, G
+        "A": [220.00, 261.63, 329.63],  # A, C, E
+        "Eb": [155.56, 185.00, 233.08],  # Eb, G, Bb
+    }
+
+    chord_tones = chord_fundamentals.get(current_chord, chord_fundamentals["Dm"])
+
+    processed = _apply_harmonic_resonance(board(audio, sr), sr, chord_tones, q=8.0, gain_db=1.5)
 
     # Apply stage-specific advanced processing
     if stage == "early-build":

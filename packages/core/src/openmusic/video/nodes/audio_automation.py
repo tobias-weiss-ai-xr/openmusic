@@ -19,21 +19,85 @@ def _apply_stage_modifications(
     audio: np.ndarray,
     sr: int,
     stage: str,
+    key: str = "Dm",
+    bpm: int = 125,
 ) -> np.ndarray:
-    """Apply stage-specific audio effects."""
+    """Apply stage-specific audio effects for harmonic expression.
+
+    Enhanced dynamics and EQ based on stage emotional intensity:
+    - Intro/dissolution: spacious, filtered
+    - Build: subtle drive, upward sweep
+    - Peak: aggressive, saturated
+    - Post-peak: varied, broken
+
+    Args:
+        audio: Audio segment (stereo)
+        sr: Sample rate
+        stage: Stage identifier
+        key: Musical key for harmonic context
+        bpm: BPM for rhythmic modulation
+
+    Returns:
+        Processed audio segment
+    """
     board = pedalboard.Pedalboard()
 
-    if stage in ["ambient-intro", "dissolution"]:
-        board.append(pedalboard.LowpassFilter(cutoff_frequency=500))
-        board.append(pedalboard.Reverb(wet_level=0.4))
+    if stage == "ambient-intro":
+        board.append(pedalboard.LowpassFilter(cutoff_frequency_hz=400))
+        board.append(pedalboard.Reverb(wet_level=0.5, decay_seconds=4.0))
+        board.append(pedalboard.Limiter(limit_db=-3.0))
 
-    elif stage in ["peak-one", "peak-two"]:
-        board.append(pedalboard.LowShelfFilter(gain_db=4, cutoff_frequency=80))
-        board.append(pedalboard.HighpassFilter(cutoff_frequency=25))
-        board.append(pedalboard.Compressor(threshold_db=-18, ratio=4.0))
+    elif stage == "early-build":
+        board.append(pedalboard.HighpassFilter(cutoff_frequency_hz=40))
+        board.append(pedalboard.PeakFilter(peak_frequency_hz=800, gain_db=2, q=1.0))
+        board.append(pedalboard.Compressor(threshold_db=-16, ratio=3.0))
+        board.append(pedalboard.Reverb(wet_level=0.3))
 
-    else:
-        board.append(pedalboard.Compressor(threshold_db=-14, ratio=3.0))
+    elif stage == "mid-build":
+        board.append(pedalboard.HighpassFilter(cutoff_frequency_hz=50))
+        board.append(pedalboard.PeakFilter(peak_frequency_hz=1200, gain_db=3, q=0.8))
+        board.append(pedalboard.Compressor(threshold_db=-18, ratio=3.5))
+
+    elif stage == "pre-peak-one":
+        board.append(pedalboard.LowShelfFilter(gain_db=3, cutoff_frequency_hz=120))
+        board.append(pedalboard.HighpassFilter(cutoff_frequency_hz=60))
+        board.append(pedalboard.Bitcrush(bit_depth=16))
+        board.append(pedalboard.Compressor(threshold_db=-20, ratio=4.0))
+
+    elif stage == "peak-one":
+        board.append(pedalboard.LowShelfFilter(gain_db=6, cutoff_frequency_hz=100))
+        board.append(pedalboard.HighpassFilter(cutoff_frequency_hz=80))
+        board.append(pedalboard.Distortion(drive_db=12))
+        board.append(pedalboard.Compressor(threshold_db=-24, ratio=5.0))
+        board.append(pedalboard.Tanh())
+
+    elif stage == "peak-two":
+        board.append(pedalboard.LowShelfFilter(gain_db=5, cutoff_frequency_hz=110))
+        board.append(pedalboard.PeakFilter(peak_frequency_hz=2000, gain_db=4, q=1.2))
+        board.append(pedalboard.Saturation(drive_db=18))
+        board.append(pedalboard.Compressor(threshold_db=-22, ratio=4.5))
+
+    elif stage == "post-peak":
+        board.append(pedalboard.LowpassFilter(cutoff_frequency_hz=6000))
+        board.append(pedalboard.BiquadFilter(cutoff_frequency_hz=200, gain_db=-3))
+        board.append(pedalboard.Delay(delay_seconds=0.125, feedback=0.3))
+        board.append(pedalboard.Compressor(threshold_db=-16, ratio=3.5))
+
+    elif stage == "decay-one":
+        board.append(pedalboard.LowpassFilter(cutoff_frequency_hz=1500))
+        board.append(pedalboard.Reverb(wet_level=0.6, decay_seconds=3.0))
+        board.append(pedalboard.Compressor(threshold_db=-12, ratio=2.5))
+
+    elif stage == "decay-two":
+        board.append(pedalboard.LowpassFilter(cutoff_frequency_hz=800))
+        board.append(pedalboard.Reverb(wet_level=0.7, decay_seconds=5.0))
+        board.append(pedalboard.Delay(delay_seconds=0.25, feedback=0.4))
+        board.append(pedalboard.Limiter(limit_db=-6.0))
+
+    elif stage == "dissolution":
+        board.append(pedalboard.LowpassFilter(cutoff_frequency_hz=400))
+        board.append(pedalboard.Reverb(wet_level=0.8, decay_seconds=8.0))
+        board.append(pedalboard.Limiter(limit_db=-12.0))
 
     return board(audio, sr)
 
@@ -50,6 +114,8 @@ def apply_per_stage_audio_automation(state: VideoPipelineState) -> Dict[str, Any
     config = state["config"]
     audio_paths = state["audio_paths"]
     stage_timings = state["stage_timings"]
+    key = config.get("key", "Dm")
+    bpm = config.get("bpm", 125)
 
     if not audio_paths:
         raise ValueError("No audio paths to process")
@@ -76,7 +142,7 @@ def apply_per_stage_audio_automation(state: VideoPipelineState) -> Dict[str, Any
             stage_segment = processed_audio[start_sample:end_sample]
 
             try:
-                processed_segment = _apply_stage_modifications(stage_segment, sample_rate, stage_name)
+                processed_segment = _apply_stage_modifications(stage_segment, sample_rate, stage_name, key, bpm)
                 processed_audio[start_sample:end_sample] = processed_segment
                 logger.info(f"Applied automation for stage {stage_name} ({start_sec}-{end_sec}s)")
             except Exception as e:

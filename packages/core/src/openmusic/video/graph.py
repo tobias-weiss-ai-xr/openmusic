@@ -38,13 +38,17 @@ def _images_join(state: VideoPipelineState) -> Dict[str, Any]:
 
 def build_video_pipeline_graph(
     config: Dict[str, Any],
+    use_svg: bool = False,
     **kwargs,
 ) -> StateGraph:
     """Build the video pipeline LangGraph."""
     graph = StateGraph(VideoPipelineState)
 
     graph.add_node("generate_all_audio_segments", generate_all_audio_segments)
-    graph.add_node("generate_image_for_stage", generate_image_for_stage)
+
+    image_node = generate_svg_image_for_stage if use_svg else generate_image_for_stage
+    graph.add_node("generate_image_for_stage", image_node)
+
     graph.add_node("images_join", _images_join)
     graph.add_node("apply_per_stage_audio_automation", apply_per_stage_audio_automation)
     graph.add_node("render_video_with_crossfades", render_video_with_crossfades)

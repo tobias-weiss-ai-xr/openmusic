@@ -726,6 +726,12 @@ def comfyui_status(host: str, port: int):
     help="Output video path",
 )
 @click.option(
+    "--use-svg",
+    is_flag=True,
+    default=False,
+    help="Use lightweight SVG generation instead of SDXL (GPU-free)",
+)
+@click.option(
     "--sdxl-model",
     default="stabilityai/sdxl-turbo",
     help="HuggingFace SDXL model ID or local path",
@@ -756,6 +762,7 @@ def publish_video(
     audio: Optional[str],
     config: Optional[str],
     output: str,
+    use_svg: bool,
     sdxl_model: str,
     max_concurrent_images: int,
     crossfade_duration: int,
@@ -791,6 +798,7 @@ def publish_video(
 
         graph = build_video_pipeline_graph(
             graph_config,
+            use_svg=use_svg,
             sdxl_model_path=sdxl_model,
             max_concurrent_images=max_concurrent_images,
             crossfade_duration=crossfade_duration,
@@ -804,7 +812,9 @@ def publish_video(
 
         async def run_pipeline():
             nonlocal final_state
-            async for update in graph.astream(None):
+            from openmusic.video.state import initialize_video_pipeline_state
+            initial_state = initialize_video_pipeline_state(graph_config)
+            async for update in graph.astream(initial_state):
                 final_state = update
 
         asyncio.run(run_pipeline())

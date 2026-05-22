@@ -838,13 +838,18 @@ def publish_video(
     default="youtube_token.json",
     help="Output path for OAuth token file",
 )
-def auth_youtube(output: str):
+@click.option(
+    "--code",
+    type=str,
+    default=None,
+    help="OAuth authorization code (if you already have one)",
+)
+def auth_youtube(output: str, code: Optional[str]):
     """Generate YouTube OAuth token using browser flow."""
     try:
         import secrets
         import requests
         from datetime import datetime, timedelta
-        from googleapiclient.http import MediaFileUpload
 
         CLIENT_ID = os.getenv("YOUTUBE_CLIENT_ID", "")
         CLIENT_SECRET = os.getenv("YOUTUBE_CLIENT_SECRET", "")
@@ -886,11 +891,18 @@ def auth_youtube(output: str):
         click.echo(f"\nVisit this URL in your browser:\n")
         click.echo(f"{auth_url}")
         click.echo("\n" + "=" * 70)
-        click.echo("After authorizing, paste the code below and press Enter:\n")
 
-        auth_code = click.prompt("OAuth Code")
+        if code:
+            auth_code = code
+        else:
+            click.echo("After authorizing, paste the code below (or use --code flag):\n")
+            try:
+                auth_code = click.prompt("OAuth Code")
+            except:
+                click.echo("Input not available. Use --code flag to provide it.")
+                return
 
-        if not auth_code.strip():
+        if not auth_code or not auth_code.strip():
             click.echo("No code provided. Exiting.")
             return
 

@@ -867,7 +867,7 @@ def auth_youtube(output: str):
             raise click.ClickException("Missing YouTube OAuth credentials. Set YOUTUBE_CLIENT_ID/YOUTUBE_CLIENT_SECRET environment variables or provide client_secrets.json")
 
         state = secrets.token_urlsafe(16)
-        PORT = 8080
+        PORT = 18080
         REDIRECT_URI = f"http://localhost:{PORT}"
 
         import urllib.parse
@@ -903,6 +903,7 @@ def auth_youtube(output: str):
                 pass
 
         def start_server():
+            HTTPServer.allow_reuse_address = True
             server = HTTPServer(('localhost', PORT), CallbackHandler)
             server.handle_request()
 

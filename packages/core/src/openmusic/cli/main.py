@@ -838,18 +838,14 @@ def publish_video(
     default="youtube_token.json",
     help="Output path for OAuth token file",
 )
-@click.option(
-    "--code",
-    type=str,
-    default=None,
-    help="OAuth authorization code (if you already have one)",
-)
-def auth_youtube(output: str, code: Optional[str]):
-    """Generate YouTube OAuth token using browser flow."""
+def auth_youtube(output: str):
+    """Generate YouTube OAuth token using browser flow with localhost callback."""
     try:
         import secrets
         import requests
         from datetime import datetime, timedelta
+        from http.server import HTTPServer, BaseHTTPRequestHandler
+        from threading import Thread
 
         CLIENT_ID = os.getenv("YOUTUBE_CLIENT_ID", "")
         CLIENT_SECRET = os.getenv("YOUTUBE_CLIENT_SECRET", "")
@@ -871,7 +867,8 @@ def auth_youtube(output: str, code: Optional[str]):
             raise click.ClickException("Missing YouTube OAuth credentials. Set YOUTUBE_CLIENT_ID/YOUTUBE_CLIENT_SECRET environment variables or provide client_secrets.json")
 
         state = secrets.token_urlsafe(16)
-        REDIRECT_URI = "urn:ietf:wg:oauth:2.0:oob"
+        PORT = 8080
+        REDIRECT_URI = f"http://localhost:{PORT}"
 
         import urllib.parse
         auth_url = (
@@ -885,30 +882,61 @@ def auth_youtube(output: str, code: Optional[str]):
             f"state={state}"
         )
 
+        class CallbackHandler(BaseHTTPRequestHandler):
+            auth_code = None
+
+            def do_GET(self):
+                from urllib.parse import urlparse, parse_qs
+                query = urlparse(self.path).query
+                params = parse_qs(query)
+                if 'code' in params:
+                    CallbackHandler.auth_code = params['code'][0]
+                    self.send_response(200)
+                    self.send_header('Content-type', 'text/html')
+                    self.end_headers()
+                    self.wfile.write(b"<html><body><h1>Authorization successful!</h1><p>Close this window and return to terminal.</p></body></html>")
+                else:
+                    self.send_response(400)
+                    self.wfile.write(b"<html><body><h1>Error</h1></body></html>")
+
+            def log_message(self, format, *args):
+                pass
+
+        def start_server():
+            server = HTTPServer(('localhost', PORT), CallbackHandler)
+            server.handle_request()
+
+        server_thread = Thread(target=start_server, daemon=True)
+        server_thread.start()
+
         click.echo("\n" + "=" * 70)
         click.echo("YouTube OAuth Authorization")
         click.echo("=" * 70)
-        click.echo(f"\nVisit this URL in your browser:\n")
+        click.echo(f"\n1. Opening browser (or visit manually):\n")
         click.echo(f"{auth_url}")
+        click.echo(f"\n2. Authorization will be captured automatically via localhost:{PORT}")
         click.echo("\n" + "=" * 70)
 
-        if code:
-            auth_code = code
-        else:
-            click.echo("After authorizing, paste the code below (or use --code flag):\n")
-            try:
-                auth_code = click.prompt("OAuth Code")
-            except:
-                click.echo("Input not available. Use --code flag to provide it.")
-                return
+        try:
+            import webbrowser
+            webbrowser.open(auth_url)
+        except:
+            pass
 
-        if not auth_code or not auth_code.strip():
-            click.echo("No code provided. Exiting.")
+        click.echo("\nWaiting for authorization (60s timeout)...")
+        for _ in range(60):
+            if CallbackHandler.auth_code:
+                break
+            import time
+            time.sleep(1)
+        else:
+            click.echo("Timeout waiting for authorization.")
             return
 
-        click.echo("\nExchanging authorization code for token...")
+        click.echo("\nAuthorization code received!")
+
         token_data = {
-            "code": auth_code.strip(),
+            "code": CallbackHandler.auth_code,
             "client_id": CLIENT_ID,
             "client_secret": CLIENT_SECRET,
             "redirect_uri": REDIRECT_URI,

@@ -1,4 +1,5 @@
 import glob as globmod
+import json
 import os
 import subprocess
 from pathlib import Path
@@ -827,6 +828,115 @@ def publish_video(
             click.echo("Pipeline completed but no video produced")
 
     except Exception as e:
+        raise click.ClickException(str(e))
+
+
+@main.command()
+@click.option(
+    "--output",
+    type=click.Path(),
+    default="youtube_token.json",
+    help="Output path for OAuth token file",
+)
+def auth_youtube(output: str):
+    """Generate YouTube OAuth token using browser flow."""
+    try:
+        import secrets
+        import requests
+        from datetime import datetime, timedelta
+        from googleapiclient.http import MediaFileUpload
+
+        CLIENT_ID = os.getenv("YOUTUBE_CLIENT_ID", "")
+        CLIENT_SECRET = os.getenv("YOUTUBE_CLIENT_SECRET", "")
+        SCOPES = ["https://www.googleapis.com/auth/youtube.upload"]
+        
+        # Read from client_secrets.json or environment
+        client_secrets_path = None
+        if os.path.exists("client_secrets.json"):
+            client_secrets_path = "client_secrets.json"
+
+        if client_secrets_path:
+            with open(client_secrets_path, "r") as f:
+                secrets_data = json.load(f)
+            installed = secrets_data.get("installed", secrets_data)
+            CLIENT_ID = installed.get("client_id", CLIENT_ID)
+            CLIENT_SECRET = installed.get("client_secret", CLIENT_SECRET)
+
+        if not CLIENT_ID or not CLIENT_SECRET:
+            raise click.ClickException("Missing YouTube OAuth credentials. Set YOUTUBE_CLIENT_ID/YOUTUBE_CLIENT_SECRET environment variables or provide client_secrets.json")
+
+        state = secrets.token_urlsafe(16)
+        REDIRECT_URI = "urn:ietf:wg:oauth:2.0:oob"
+
+        import urllib.parse
+        auth_url = (
+            "https://accounts.google.com/o/oauth2/v2/auth?"
+            f"client_id={CLIENT_ID}&"
+            f"redirect_uri={urllib.parse.quote(REDIRECT_URI)}&"
+            f"scope={' '.join(SCOPES)}&"
+            "response_type=code&"
+            "access_type=offline&"
+            "prompt=consent&"
+            f"state={state}"
+        )
+
+        click.echo("\n" + "=" * 70)
+        click.echo("YouTube OAuth Authorization")
+        click.echo("=" * 70)
+        click.echo(f"\nVisit this URL in your browser:\n")
+        click.echo(f"{auth_url}")
+        click.echo("\n" + "=" * 70)
+        click.echo("After authorizing, paste the code below and press Enter:\n")
+
+        auth_code = click.prompt("OAuth Code")
+
+        if not auth_code.strip():
+            click.echo("No code provided. Exiting.")
+            return
+
+        click.echo("\nExchanging authorization code for token...")
+        token_data = {
+            "code": auth_code.strip(),
+            "client_id": CLIENT_ID,
+            "client_secret": CLIENT_SECRET,
+            "redirect_uri": REDIRECT_URI,
+            "grant_type": "authorization_code"
+        }
+
+        response = requests.post(
+            "https://oauth2.googleapis.com/token",
+            data=token_data
+        )
+
+        if response.status_code != 200:
+            click.echo(f"Token exchange failed: {response.text}")
+            return
+
+        tokens = response.json()
+
+        expiry_datetime = datetime.now() + timedelta(seconds=tokens.get('expires_in', 3600))
+
+        token_file_data = {
+            "token": tokens["access_token"],
+            "refresh_token": tokens["refresh_token"],
+            "token_uri": "https://oauth2.googleapis.com/token",
+            "client_id": CLIENT_ID,
+            "client_secret": CLIENT_SECRET,
+            "scopes": SCOPES,
+            "expiry": expiry_datetime.strftime("%Y-%m-%dT%H:%M:%SZ"),
+            "universe_domain": "googleapis.com",
+            "project_id": "gen-lang-client-0811477124"
+        }
+
+        with open(output, 'w') as f:
+            json.dump(token_file_data, f, indent=2)
+
+        click.echo(f"\nOAuth token saved to: {output}")
+        click.echo(f"Expires at: {expiry_datetime}")
+        click.echo("\n" + "=" * 70)
+
+    except Exception as e:
+        click.echo(f"Error generating OAuth token: {e}")
         raise click.ClickException(str(e))
 
 

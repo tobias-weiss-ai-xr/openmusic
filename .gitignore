@@ -15,3 +15,7 @@ ACE-Step-1.5/
 poc/
 *.egg-info/
 .cache/openmusic/
+
+# OAuth credentials (keep out of repo)
+client_secrets.json
+youtube_token.json

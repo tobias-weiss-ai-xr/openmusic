@@ -101,9 +101,10 @@ class YouTubeAPIUploader:
                 logger.warning(f"Failed to load token file: {e}. Re-authenticating.")
 
         # Refresh or create new credentials
+        from google.auth.transport.requests import Request
         if credentials and credentials.expired and credentials.refresh_token:
             try:
-                credentials.refresh(None)
+                credentials.refresh(Request())
             except Exception as e:
                 logger.warning(f"Failed to refresh token: {e}. Re-authenticating.")
                 credentials = None

@@ -2,266 +2,272 @@
 
 ## Project Overview
 
-OpenMusic is an AI-powered dub techno generation framework. It combines ACE-Step 1.5 (AI audio generation) with Tone.js effects (TypeScript) orchestrated by a Python CLI. The system generates hours-long dub techno mixes by producing short AI segments, running them through a dub effects chain, and assembling the result with crossfades.
+OpenMusic is an AI-powered dub techno generation framework. ACE-Step 1.5 generates raw audio segments (GPU, DiT model), a Tone.js effects chain processes them (Node.js, `web-audio-api`), and a Python CLI orchestrates everything into a seamless mix with crossfades.
+
+**Version**: 0.1.0 (Python `openmusic-core`, TypeScript packages under pnpm workspace)
+
+---
 
 ## Architecture
 
 ```
-                          CLI (click)
-                             |
-                    MixConfig from flags/YAML
-                             |
-                     MixOrchestrator
-                    /       |        \
-                   /        |         \
-    ACEStepGenerator  TypeScriptBridge  _assemble_segments()
-          |                  |                  |
-    ACE-Step DiT model   Node.js subprocess   numpy crossfade
-    (GPU, 8 turbo steps)  (Tone.js effects)   (linear blend)
-          |                  |                  |
-      raw WAV files    processed WAV files   final mix.flac/.wav
+                            CLI (click / @openmusic/cli)
+                                   |
+                          MixConfig from flags/YAML
+                                   |
+                           MixOrchestrator
+                          /       |        \
+                         /        |         \
+          ACEStepGenerator  TypeScriptBridge  _assemble_segments()
+                |                  |                  |
+          ACE-Step DiT model   Node.js subprocess   numpy crossfade
+          (GPU, 8 turbo steps) (Tone.js effects)   (linear blend)
+                |                  |                  |
+            raw WAV          processed WAV        final mix.flac
 ```
+
+**Bridge mechanism**: Python writes WAV stems + JSON config to `/tmp/openmusic-{uuid}/`, spawns `node packages/effects/dist/index.js --config <path>`, reads processed WAV back. File-based, no IPC. Temp dirs preserved on failure for debugging.
+
+---
 
 ## Module Map
 
-### `packages/core/` (Python orchestrator)
+### `packages/core/` (Python orchestrator) — installed as `openmusic-core`
 
-The main package. Installed as `openmusic-core`.
+| Path | Purpose |
+|------|---------|
+| `src/openmusic/cli/main.py` | Click CLI: `generate`, `validate`, `version`, `auth-youtube` |
+| `src/openmusic/orchestrator/mix.py` | `MixConfig` dataclass, `MixOrchestrator`, effects presets |
+| `src/openmusic/orchestrator/pipeline.py` | `run_pipeline()` generator → `PipelineResult` per stage |
+| `src/openmusic/orchestrator/progress.py` | `ProgressReporter` with ETA and callback hooks |
+| `src/openmusic/acestep/generator.py` | `ACEStepGenerator` wraps ACE-Step DiT for texture generation |
+| `src/openmusic/acestep/config.py` | `ACEStepConfig`, `GenerationParams` dataclasses |
+| `src/openmusic/acestep/cache.py` | SHA-256 content-addressed cache at `~/.cache/openmusic/acestep/` |
+| `src/openmusic/bridge/typescript_bridge.py` | `TypeScriptBridge` — spawns `node packages/effects/dist/index.js` |
+| `src/openmusic/bridge/pedalboard_bridge.py` | Alternative bridge using Spotify's `pedalboard` (no Node.js needed) |
+| `src/openmusic/arrangement/mixer.py` | `MixArranger` — loads WAV, applies crossfade, saves result |
+| `src/openmusic/arrangement/crossfade.py` | Numpy crossfade functions (linear, equal-power) |
+| `src/openmusic/arrangement/timeline.py` | Timeline utilities for segment scheduling |
+| `src/openmusic/export/encoder.py` | `AudioEncoder` wraps ffmpeg for FLAC/MP3 encoding + metadata |
+| `src/openmusic/export/metadata.py` | `TrackMetadata` dataclass, ffmpeg metadata embedding |
+| `src/openmusic/export/youtube_uploader.py` | YouTube upload via google-api-python-client (OAuth) |
+| `src/openmusic/export/cover_generator.py` | SVG-based cover art generation |
+| `src/openmusic/effects/` | Python DSP effects (pedalboard-based): delay, compression, saturation, stereo widening, granular delay, LFO, VST scanner, spectral masking, mastering chain, frequency masking avoidance |
+| `src/openmusic/config/parser.py` | YAML config file parser |
+| `src/openmusic/mcp/orchestrator.py` | MCP server for external tool orchestration |
+| `src/openmusic/video/` | Video generation pipeline: graph-based, with audio automation, SVG image gen, parallel rendering |
+| `tests/` | ~529 test cases across 40 files (pytest) |
 
-| Path                                        | Purpose                                                                              |
-| ------------------------------------------- | ------------------------------------------------------------------------------------ |
-| `src/openmusic/cli/main.py`                 | Click CLI with `generate`, `validate`, `version` commands                            |
-| `src/openmusic/orchestrator/mix.py`         | `MixConfig` dataclass, `MixOrchestrator` class, effects presets                      |
-| `src/openmusic/orchestrator/pipeline.py`    | `run_pipeline()` generator that yields `PipelineResult` per stage                    |
-| `src/openmusic/orchestrator/progress.py`    | `ProgressReporter` with ETA and callback hooks                                       |
-| `src/openmusic/acestep/generator.py`        | `ACEStepGenerator` wraps ACE-Step DiT model for texture generation                   |
-| `src/openmusic/acestep/config.py`           | `ACEStepConfig` and `GenerationParams` dataclasses                                   |
-| `src/openmusic/acestep/cache.py`            | `CacheManager` with SHA-256 content-addressed cache at `~/.cache/openmusic/acestep/` |
-| `src/openmusic/bridge/typescript_bridge.py` | `TypeScriptBridge` calls `node packages/effects/dist/index.js` via subprocess        |
-| `src/openmusic/arrangement/mixer.py`        | `MixArranger` loads WAV, applies equal-power crossfade, saves result                 |
-| `src/openmusic/arrangement/crossfade.py`    | Numpy crossfade functions (linear, equal-power curves)                               |
-| `src/openmusic/arrangement/timeline.py`     | Timeline utilities for segment scheduling                                            |
-| `src/openmusic/export/encoder.py`           | `AudioEncoder` wraps ffmpeg for FLAC/MP3 encoding with metadata                      |
-| `src/openmusic/export/metadata.py`          | `TrackMetadata` dataclass and ffmpeg metadata embedding                              |
+Optional dependency groups in `pyproject.toml`:
+- `acestep` — torch/torchvision/torchaudio (CUDA 12.8), transformers, diffusers, accelerate, etc.
+- `dsp` — pedalboard, librosa
+- `youtube` — google-api-python-client, google-auth-oauthlib, youtube-up
+- `video` — langgraph, diffusers, pedalboard, tenacity
+- `artwork` — openart, svgwrite, cairosvg
+- `dev` — pytest, google API libs
 
-### `packages/effects/` (TypeScript effects engine)
+Custom PyTorch index in pyproject.toml:
+```toml
+[[tool.uv.index]]
+name = "pytorch-cu128"
+url = "https://download.pytorch.org/whl/cu128"
+explicit = true
 
-Built with Tone.js. Runs inside Node.js, called from Python via `TypeScriptBridge`.
+[tool.uv.sources]
+torch = { index = "pytorch-cu128", extra = "acestep" }
+```
 
-| Path                             | Purpose                                                                           |
-| -------------------------------- | --------------------------------------------------------------------------------- |
-| `src/index.ts`                   | Entry point. When run directly, reads `--config` JSON, renders audio, exports WAV |
-| `src/engine/audio_engine.ts`     | `AudioEngine` orchestrates rendering pipeline                                     |
-| `src/engine/decoder.ts`          | WAV decoder                                                                       |
-| `src/engine/encoder.ts`          | WAV/FLAC/MP3 encoder                                                              |
-| `src/chain.ts`                   | `DubTechnoEffectsChain` chains all effects in series                              |
-| `src/config.ts`                  | Preset configs: `DEEP_DUB`, `MINIMAL_DUB`, `CLUB_DUB`, `DEFAULT_EFFECTS_CONFIG`   |
-| `src/effects/delay.ts`           | Stereo multi-tap delay                                                            |
-| `src/effects/reverb.ts`          | Convolution reverb with filtered input                                            |
-| `src/effects/filter.ts`          | Bandpass/lowpass filter with LFO modulation                                       |
-| `src/effects/distortion.ts`      | Waveshaper distortion                                                             |
-| `src/effects/vinyl.ts`           | Vinyl noise simulation (crackle, hiss)                                            |
-| `src/effects/tape_saturation.ts` | Tape saturation emulation                                                         |
-| `src/effects/multi_tap_delay.ts` | Rhythmic multi-tap delay                                                          |
-| `src/effects/granular_delay.ts`  | Granular processing delay                                                         |
+### `packages/effects/` (TypeScript — Tone.js effects engine)
+
+| Path | Purpose |
+|------|---------|
+| `src/index.ts` | Entry point — reads `--config` JSON, renders audio via OfflineAudioContext, exports WAV |
+| `src/chain.ts` | `DubTechnoEffectsChain` chains all effects in series |
+| `src/config.ts` | Preset configs: `DEEP_DUB`, `MINIMAL_DUB`, `CLUB_DUB`, `DEFAULT_EFFECTS_CONFIG` |
+| `src/engine/audio_engine.ts` | `AudioEngine` orchestrates rendering pipeline |
+| `src/engine/decoder.ts` | WAV decoder |
+| `src/engine/encoder.ts` | WAV/FLAC/MP3 encoder |
+| `src/effects/delay.ts` | Stereo multi-tap delay |
+| `src/effects/reverb.ts` | Convolution reverb with filtered input |
+| `src/effects/filter.ts` | Bandpass/lowpass filter with LFO modulation |
+| `src/effects/distortion.ts` | Waveshaper distortion |
+| `src/effects/vinyl.ts` | Vinyl noise simulation (crackle, hiss) |
+| `src/effects/tape_saturation.ts` | Tape saturation emulation |
+| `src/effects/multi_tap_delay.ts` | Rhythmic multi-tap delay |
+| `src/effects/granular_delay.ts` | Granular processing delay |
+
+~172 test cases across 10 files (vitest). Tests live alongside source as `*.test.ts`.
+
+### `packages/patterns/` (TypeScript — Strudel-inspired patterns + music theory)
+
+| Path | Purpose |
+|------|---------|
+| `src/index.ts` | Public API exports |
+| `src/strudel/` | Strudel-inspired pattern definitions for dub techno |
+| `src/theory/` | Music theory: scales, chord progressions, voicings |
+
+~85 test cases across 6 files (vitest).
+
+### `packages/cli/` (TypeScript — user-facing CLI shim)
+
+| Path | Purpose |
+|------|---------|
+| `src/index.ts` | CLI entrypoint — delegates to Python `openmusic-core` as subprocess |
+
+Depends on `@openmusic/effects` and `@openmusic/patterns` as workspace dependencies.
 
 ### `ACE-Step-1.5/` (external AI model)
 
-Cloned from https://github.com/ace-step/ACE-Step-1.5. Has its own Python venv with torch, transformers, diffusers. Not part of this monorepo's build system.
+Cloned from https://github.com/ace-step/ACE-Step-1.5. Has its own Python venv with torch, transformers, diffusers. **Not part of this monorepo's build system**. Listed in `.gitignore`.
 
-## Pipeline Flow
+---
 
-### Step 1: CLI parses arguments into MixConfig
+## Commands
 
-```python
-# cli/main.py
-MixConfig(
-    length=7200.0,      # 2h in seconds (parsed from "2h", "30m", "45s")
-    bpm=125,
-    key="Dm",
-    output_path="mix.flac",
-    segment_duration=180.0,
-    effects_preset="deep_dub",
-    skip_effects=False,
-)
-```
-
-The `generate` command accepts `--length`, `--bpm`, `--key`, `--output`, `--config` (YAML), and `--no-effects`.
-
-### Step 2: MixOrchestrator splits into segments
-
-```python
-segment_count = math.ceil(config.length / config.segment_duration)
-# For a 2h mix: ceil(7200 / 180) = 40 segments
-```
-
-Each segment gets a position-aware prompt (intro/building, main groove, climax/outro).
-
-### Step 3: ACE-Step generates raw WAV per segment
-
-`ACEStepGenerator.generate_texture()` calls the ACE-Step DiT model:
-
-- Uses `AceStepHandler` and `LLMHandler` from the `acestep` package
-- `inference_steps=8` (turbo mode, ~12 seconds per segment on RTX 4080)
-- Output: raw WAV at 48kHz stereo
-- Cached by SHA-256 of (prompt + params) in `~/.cache/openmusic/acestep/`
-- GPU detection: auto-selects CUDA if available, falls back to CPU
-
-### Step 4: TypeScriptBridge applies effects
-
-`TypeScriptBridge.call_audio_engine()`:
-
-1. Creates a temp directory with `input/` and `output/` subdirs
-2. Copies segment WAV into `input/stem_0.wav`
-3. Writes a `config.json` with input stems, output path, effects config, and pattern
-4. Runs `node packages/effects/dist/index.js --config <path>` with 600s timeout
-5. Copies the processed WAV back to a persistent temp file
-6. Cleans up the temp directory
-
-If `skip_effects=True`, the bridge is bypassed entirely and the raw segment is copied as-is.
-
-### Step 5: Segments assembled with crossfade
-
-`_assemble_segments()` in `mix.py`:
-
-- Loads all segment WAV files with `soundfile`
-- Computes adaptive crossfade: `min(1s at 48kHz, shortest_segment / 4)`, minimum 10ms
-- Applies linear crossfade between overlapping segments
-- First segment: write all except tail crossfade
-- Middle segments: crossfade in, write middle, reserve tail for next
-- Last segment: crossfade in, write remainder
-- Writes output as WAV (`.wav`) or FLAC (`.flac`) via `soundfile`
-
-### Step 6: Output written
-
-The final mix file lands at the path specified by `--output` (default: `mix.flac`).
-
-## Key Configuration
-
-### ACEStepConfig
-
-| Field             | Default             | Description                                             |
-| ----------------- | ------------------- | ------------------------------------------------------- |
-| `model_path`      | `acestep-v15-turbo` | Model checkpoint name                                   |
-| `device`          | `auto`              | `auto`, `cuda`, or `cpu`                                |
-| `audio_format`    | `wav`               | Output audio format from ACE-Step                       |
-| `max_duration`    | `600`               | Maximum single generation duration (seconds)            |
-| `inference_steps` | `8`                 | Diffusion steps (lower = faster, slightly less quality) |
-
-### MixConfig
-
-| Field              | Default    | Description                      |
-| ------------------ | ---------- | -------------------------------- |
-| `length`           | `7200.0`   | Total mix length in seconds      |
-| `bpm`              | `125`      | Beats per minute                 |
-| `key`              | `Dm`       | Musical key                      |
-| `output_path`      | `mix.flac` | Output file path                 |
-| `segment_duration` | `180.0`    | Seconds per AI-generated segment |
-| `effects_preset`   | `deep_dub` | Effects preset name              |
-| `skip_effects`     | `False`    | Bypass effects processing        |
-
-### Effects Presets
-
-Three built-in presets, each configuring delay, reverb, filter, distortion, and vinyl:
-
-- **`deep_dub`**: Heavy delay (0.6 mix, 0.5 feedback), long reverb (4s decay, 0.5 mix), low bandpass (600Hz), moderate distortion, noticeable vinyl noise
-- **`minimal_dub`**: Lighter delay (0.35 mix), shorter reverb (2s decay, 0.25 mix), higher bandpass (900Hz), subtle distortion, faint vinyl
-- **`club_dub`**: Medium delay (0.4 mix), medium reverb (2.5s decay, 0.3 mix), mid bandpass (1000Hz), punchy distortion, moderate vinyl
-
-## Environment Setup
-
-### Prerequisites
-
-- Python 3.12+
-- Node.js (for effects engine)
-- uv package manager
-- ffmpeg (for MP3/FLAC encoding)
-- NVIDIA GPU with CUDA (recommended)
-
-### Setup Steps
+### TypeScript (pnpm workspace — root)
 
 ```bash
-# 1. Clone the repo
-git clone <repo-url> openmusic
-cd openmusic
-
-# 2. Clone ACE-Step-1.5 at repo root
-git clone https://github.com/ace-step/ACE-Step-1.5.git ACE-Step-1.5
-
-# 3. Set up ACE-Step venv
-cd ACE-Step-1.5
-python -m venv .venv
-# Windows:
-.venv\Scripts\activate
-# Linux/macOS:
-source .venv/bin/activate
-pip install torch transformers diffusers
-cd ..
-
-# 4. Install openmusic-core into ACE-Step's venv
-uv pip install -e packages/core --python ACE-Step-1.5/.venv/Scripts/python.exe
-
-# 5. Build TypeScript effects engine
-cd packages/effects
-npm install
-npx tsc
-cd ../..
-
-# 6. Generate a mix
-ACE-Step-1.5/.venv/Scripts/python.exe -m openmusic.cli.main generate --length 10m --bpm 125 --key Dm --output mix.flac
+pnpm install              # Install all workspace deps
+pnpm build                # tsc -p packages/effects/tsconfig.json
+pnpm test                 # vitest run (all packages)
+pnpm format               # prettier --write .
+pnpm lint                 # eslint .
+pnpm docs                 # typedoc
 ```
 
-### GPU Tiers
+### Per-package
 
-| Tier | VRAM    | Example GPUs    |
-| ---- | ------- | --------------- |
-| 1    | <=4 GB  | GTX 1650        |
-| 2    | <=6 GB  | RTX 2060        |
-| 3    | <=8 GB  | RTX 3060        |
-| 4    | <=12 GB | RTX 4080        |
-| 5    | <=16 GB | RTX 4080 Super  |
-| 6    | <=20 GB | RTX 4090        |
-| 7    | <=24 GB | RTX 4090 (24GB) |
-| 8    | >24 GB  | A100, H100      |
+```bash
+# Python (openmusic-core)
+cd packages/core
+uv venv                   # Create venv
+uv pip install -e ".[dev]"  # Install with dev deps
+uv run pytest             # Run all Python tests
+uv run pytest tests/test_cli/test_cli.py  # Single test file
+uv run pytest -k "test_name"              # Single test (name match)
+
+# TypeScript packages (from workspace root or package dir)
+pnpm --filter @openmusic/effects test
+pnpm --filter @openmusic/patterns test
+```
+
+### CI (`.github/workflows/ci.yml`)
+
+Two parallel jobs on push/PR to `main`:
+1. **typescript** — Node 22, npm install, `npx tsc -p packages/effects/tsconfig.json`, `npx vitest run`
+2. **python** — uv, `uv pip install -e ".[dev]"`, `.venv/bin/python -m pytest`
+
+Both install `ffmpeg` system dependency.
+
+---
 
 ## CLI Reference
 
 ```
 openmusic generate [OPTIONS]
   --length TEXT      Mix length (e.g. 2h, 30m, 45s)  [default: 1h]
-  --bpm INTEGER      Beats per minute  [default: 125]
-  --key TEXT         Musical key (e.g. Dm, C, F#)  [default: Dm]
-  --output TEXT      Output file path  [default: mix.flac]
+  --bpm INTEGER      Beats per minute                 [default: 125]
+  --key TEXT         Musical key (e.g. Dm, C, F#)    [default: Dm]
+  --output TEXT      Output file path (.flac or .wav) [default: mix.flac]
   --config PATH      Path to YAML config file
   --no-effects       Bypass effects processing
 
 openmusic validate CONFIG_PATH
-  Validates a YAML config file has required keys: length, bpm, key, output_path
+  Checks YAML config has required keys: length, bpm, key, output_path
 
 openmusic version
-  Shows version (0.1.0)
+  Prints the current version
+
+openmusic auth-youtube [OPTIONS]
+  --code TEXT   OAuth code for non-interactive token generation
+  --force       Force re-authentication
 ```
 
-## Post-Processing
+OAuth for YouTube: uses localhost:18080 callback, auto-captures code. Token stored in `youtube_token.json` (gitignored). Requires `client_secrets.json` (gitignored).
 
-Convert to MP3:
+---
+
+## Key Configuration
+
+### MixConfig fields
+
+| Field | Default | Description |
+|---|---|---|
+| `length` | `7200.0` (1h) | Total mix length in seconds |
+| `bpm` | `125` | Beats per minute |
+| `key` | `Dm` | Musical key |
+| `output_path` | `mix.flac` | Output file path |
+| `segment_duration` | `180.0` | Seconds per AI-generated segment |
+| `effects_preset` | `deep_dub` | Effects preset name |
+| `skip_effects` | `False` | Bypass effects processing |
+
+### Effects presets
+
+| Preset | Delay Mix | Reverb Decay | Filter | Character |
+|---|---|---|---|---|
+| `deep_dub` | 0.60 | 4.0s | 600Hz bandpass | Heavy, atmospheric |
+| `minimal_dub` | 0.35 | 2.0s | 900Hz bandpass | Clean, restrained |
+| `club_dub` | 0.40 | 2.5s | 1000Hz bandpass | Punchy, mid-focused |
+
+### Crossfade behavior
+
+In `MixOrchestrator._assemble_segments()`: linear crossfade between overlapping segments. Adaptive length:
+- `min(1s at 48kHz, shortest_segment / 4)`, minimum 10ms
+- First segment: write all except tail crossfade
+- Middle: crossfade in, write middle, reserve tail
+- Last: crossfade in, write remainder
+
+---
+
+## Setup
 
 ```bash
-ffmpeg -i mix.flac -c:a libmp3lame -b:a 320k mix.mp3
+# 1. Clone ACE-Step-1.5 at repo root (must match the expected path)
+git clone https://github.com/ace-step/ACE-Step-1.5.git
+
+# 2. ACE-Step venv
+cd ACE-Step-1.5 && python -m venv .venv
+source .venv/bin/activate
+pip install torch transformers diffusers
+
+# 3. Install openmusic-core into ACE-Step's venv
+uv pip install -e packages/core --python ACE-Step-1.5/.venv/bin/python
+
+# 4. Build TS effects engine (using pnpm from workspace root)
+cd packages/effects && npm install && npx tsc && cd ../..
+
+# 5. Generate a 10m mix
+ACE-Step-1.5/.venv/bin/python -m openmusic.cli.main generate --length 10m --bpm 125 --key Dm --output mix.flac
 ```
 
-Create YouTube-ready MP4 with a static image:
+**Prerequisites**: Python 3.12+, Node.js, uv, ffmpeg, NVIDIA GPU with CUDA (recommended).
 
-```bash
-ffmpeg -loop 1 -i cover.jpg -i mix.flac -c:v libx264 -tune stillimage -c:a aac -b:a 256k -shortest -movflags +faststart output.mp4
-```
+---
 
 ## Testing
 
-- 473 Python tests
-- 174 TypeScript tests
-- Tests live alongside source files as `*.test.py` / `*.test.ts`
+- **Python**: `uv run pytest` from `packages/core/`. ~529 test cases across 40 files in `packages/core/tests/`. Uses `test_*.py` convention (NOT alongside source).
+- **TypeScript**: `pnpm test` from root. ~172 test cases across 17 `*.test.ts` files. Tests live **alongside source** (e.g., `src/chain.test.ts`).
+- **Coverage config** (pyproject.toml): omits `*/verify_spectral_masking.py` and `*/tests/*`.
+- pytest: `testpaths = ["tests"]`, `pythonpath = ["src"]`.
 
-## Cache
+---
 
-Generated segments are cached at `~/.cache/openmusic/acestep/` keyed by SHA-256 hash of the prompt and generation parameters. Re-running with identical prompts/settings skips generation entirely.
+## Style
+
+- **Prettier**: semicolons, single quotes, 2-space tabs, trailing commas (ES5), 100 char print width (`.prettierrc`)
+- **TypeScript**: `strict: true`, ES2022 target, ESNext modules, bundler module resolution, declarations enabled
+- **Python**: runs on 3.12+, uses `click` for CLI, `soundfile` for audio I/O, `numpy` for signal processing
+
+---
+
+## Important Gotchas
+
+- **ACE-Step-1.5 is external** — must be cloned separately at repo root. Not covered by pnpm or uv workspace. Has its own `requirements.txt`-style setup.
+- **PyTorch CUDA 12.8**: Custom uv index defined for torch/torchvision/torchaudio. Install via `uv pip install "openmusic-core[acestep]"`.
+- **Python venv for ACE-Step**: openmusic-core must be installed INTO ACE-Step's venv (the ACE-Step import path needs to resolve). The CLI entrypoint `openmusic` (Click) runs from ACE-Step's Python.
+- **YAML config**: Must have keys `length`, `bpm`, `key`, `output_path`. Validated by `openmusic validate`.
+- **Generated assets**: `*.wav`, `*.flac`, `*.mp3`, `*.mp4` are gitignored. Cache lives in `.cache/openmusic/` (gitignored).
+- **OAuth**: `client_secrets.json` and `youtube_token.json` are gitignored. YouTube auth uses OAuth callback on port 18080.
+- **pnpm for TypeScript, npm for build**: The root uses pnpm workspace, but CI and package build scripts use `npm install` / `npx tsc`. Both work — pnpm is the workspace manager, npm/npx are the actual runners.
+- **type: "module"** in all package.json files — ES module imports throughout.

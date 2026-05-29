@@ -13,6 +13,7 @@ import soundfile as sf
 
 from openmusic.acestep import ACEStepGenerator
 from openmusic.bridge.typescript_bridge import TypeScriptBridge
+from openmusic.generators import AudioGenerator, StableAudioGenerator
 
 logger = logging.getLogger(__name__)
 
@@ -350,6 +351,7 @@ class MixConfig:
     cover_artist: str = "OpenMusic"
     bpm_schedule: Optional[str] = None
     key_schedule: Optional[str] = None
+    model: str = "ace-step"
 
     def bpm_for_segment(self, index: int) -> int:
         sched = _parse_schedule(self.bpm_schedule, self.bpm)
@@ -367,7 +369,7 @@ class MixOrchestrator:
 
     def __init__(self, config: MixConfig):
         self.config = config
-        self.generator = ACEStepGenerator()
+        self.generator = self._create_generator(config.model)
         self.segment_count = math.ceil(config.length / config.segment_duration)
 
         # Select effects backend
@@ -391,6 +393,17 @@ class MixOrchestrator:
 
         # Keep bridge attribute for backward compatibility with tests
         self.bridge = self._bridge if self._bridge is not None else TypeScriptBridge()
+
+    @staticmethod
+    def _create_generator(model: str) -> AudioGenerator:
+        if model == "stable-audio-open":
+            if not StableAudioGenerator.is_available():
+                logger.warning(
+                    "Stable Audio Open not available, falling back to ACE-Step"
+                )
+                return ACEStepGenerator()
+            return StableAudioGenerator()
+        return ACEStepGenerator()
 
     def generate_mix(self) -> Path:
         segments: list[Path] = []

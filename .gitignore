@@ -19,3 +19,5 @@ poc/
 # OAuth credentials (keep out of repo)
 client_secrets.json
 youtube_token.json
+.secrets/
+cookies.txt

@@ -335,6 +335,47 @@ class YouTubeAPIUploader:
             raise YouTubeUploadError(f"Failed to add video to playlist: {e}") from e
 
 
+def _ensure_tab_separated_cookies(path_str: str) -> str:
+    """Convert space-separated cookies.txt to tab-separated (Netscape format)."""
+    path = Path(path_str)
+    if not path.exists():
+        return path_str
+
+    raw = path.read_text()
+    for line in raw.splitlines():
+        stripped = line.strip()
+        if stripped and not stripped.startswith("#"):
+            if "\t" in stripped:
+                return path_str
+            break
+
+    lines = raw.splitlines()
+    output_lines = []
+    converted = 0
+    for line in lines:
+        stripped = line.strip()
+        if not stripped or stripped.startswith("#"):
+            output_lines.append(line)
+            continue
+        parts = stripped.split()
+        if len(parts) >= 7:
+            tabbed = "\t".join([parts[0], parts[1], parts[2], parts[3], parts[4], parts[5], " ".join(parts[6:])])
+            output_lines.append(tabbed)
+            converted += 1
+        else:
+            output_lines.append(line)
+
+    if converted > 0:
+        out_path = path.with_suffix(".tab.txt")
+        out_path.write_text("\n".join(output_lines) + "\n")
+        logger.info(
+            f"Converted {converted} cookies to tab-separated: {out_path}"
+        )
+        return str(out_path)
+
+    return path_str
+
+
 class YouTubeUpFallback:
     """Fallback uploader using youtube-up package (no API quota)."""
 
@@ -380,7 +421,8 @@ class YouTubeUpFallback:
         if not video_file.exists():
             raise YouTubeUploadError(f"Video file not found: {video_path}")
 
-        cookies_file = Path(self.config.cookies_file)
+        cookies_path = _ensure_tab_separated_cookies(self.config.cookies_file)
+        cookies_file = Path(cookies_path)
         if not cookies_file.exists():
             raise YouTubeUploadError(
                 f"Cookies file not found: {self.config.cookies_file}\n"

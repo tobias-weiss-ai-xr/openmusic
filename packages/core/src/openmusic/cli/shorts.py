@@ -1,11 +1,15 @@
 """CLI commands for generating short video clips."""
 import logging
+import shutil
+import tempfile
 from pathlib import Path
 
 import click
 
 from openmusic.shorts.quotes import get_random_quote, get_quotes_by_author, QUOTES
 from openmusic.shorts.pipeline import ShortConfig, ShortsPipeline, generate_batch
+
+DEFAULT_DUB_PROMPT = "dub techno texture, deep bass, atmospheric pads, warm analog feel"
 
 
 @click.group(help="Generate short video clips with stoic quotes and animated visuals.")
@@ -14,10 +18,19 @@ def short():
 
 
 @short.command()
-@click.option("--audio", required=True, type=click.Path(exists=True, dir_okay=False),
+@click.option("--audio", default=None, type=click.Path(exists=True, dir_okay=False),
               help="Path to audio file (FLAC/WAV) to extract from")
-@click.option("--position", required=True, type=float,
+@click.option("--position", default=None, type=float,
               help="Start time in seconds for audio extraction")
+@click.option("--generate-audio", is_flag=True, default=False,
+              help="Generate fresh audio instead of extracting from existing file")
+@click.option("--model", default="ace-step",
+              type=click.Choice(["ace-step", "stable-audio-open"]),
+              help="Audio generation model (default: ace-step)")
+@click.option("--bpm", default=125, type=int,
+              help="Beats per minute for generated audio (default: 125)")
+@click.option("--key", default="Dm",
+              help="Musical key for generated audio (default: Dm)")
 @click.option("--quote-text", default=None,
               help="Custom quote text (if not using random)")
 @click.option("--quote-author", default=None,
@@ -37,8 +50,12 @@ def short():
 @click.option("--verbose", "-v", is_flag=True, default=False,
               help="Verbose logging")
 def generate(
-    audio: str,
-    position: float,
+    audio: str | None,
+    position: float | None,
+    generate_audio: bool,
+    model: str,
+    bpm: int,
+    key: str,
     quote_text: str | None,
     quote_author: str | None,
     author: str | None,
@@ -68,15 +85,60 @@ def generate(
     else:
         quote = get_random_quote(seed=seed)
 
+    # Resolve audio source: generated or from existing file
+    clip_duration = duration
+    if generate_audio:
+        if audio is not None or position is not None:
+            raise click.ClickException("--audio/--position cannot be used with --generate-audio")
+
+        # Use the configured duration as the generation duration (no extraction)
+        click.echo(f"Generating {duration}s audio with {model} @ {bpm}bpm {key}...")
+
+        if model == "stable-audio-open":
+            from openmusic.generators.stable_audio import StableAudioGenerator
+            gen = StableAudioGenerator()
+        else:
+            from openmusic.acestep.generator import ACEStepGenerator
+            gen = ACEStepGenerator()
+
+        if not gen.is_available():
+            raise click.ClickException(
+                f"{model} is not available (dependencies missing). "
+                f"Install ACE-Step or try --model stable-audio-open"
+            )
+
+        output_path = gen.generate_texture(
+            prompt=DEFAULT_DUB_PROMPT,
+            duration=duration,
+            bpm=bpm,
+            key=key,
+        )
+
+        # Copy to a temp location (pipeline does not clean up original audio_path)
+        tmp_wav = tempfile.NamedTemporaryFile(suffix=".wav", delete=False)
+        tmp_wav.close()
+        shutil.copy2(output_path, tmp_wav.name)
+        audio_path = tmp_wav.name
+        start_time = 0.0
+
+        click.echo(f"Audio generated: {audio_path}")
+    else:
+        if not audio:
+            raise click.ClickException("Either --audio or --generate-audio is required")
+        if position is None:
+            raise click.ClickException("--position is required when using --audio")
+        audio_path = audio
+        start_time = position
+        click.echo(f"Audio: {audio_path} @ {start_time}s ({clip_duration}s)")
+
     click.echo(f"Quote: \"{quote.text}\" — {quote.author}")
-    click.echo(f"Audio: {audio} @ {position}s ({duration}s)")
     click.echo(f"Output: {output or '(auto)'}")
 
     config = ShortConfig(
         quote=quote,
-        audio_path=audio,
-        audio_start_time=position,
-        clip_duration=duration,
+        audio_path=audio_path,
+        audio_start_time=start_time,
+        clip_duration=clip_duration,
         output_path=output or "",
         make_shorts=not no_shorts,
         svg_path=svg,

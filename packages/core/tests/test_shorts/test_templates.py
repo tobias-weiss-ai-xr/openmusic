@@ -45,3 +45,16 @@ class TestTemplates:
         html = render_short_html(quote=long_quote, svg_path=None)
         assert "distressed" in html
         assert "revoke" in html
+
+    def test_render_short_html_portrait_1080x1920(self):
+        html = render_short_html(quote=SAMPLE_QUOTE, svg_path=None, portrait=True)
+        assert "width: 1080px; height: 1920px" in html
+        assert "svg-wrapper" in html
+        assert "fade-overlay" in html
+        assert "64px" in html  # larger quote text
+
+    def test_render_short_html_landscape_1920x1080(self):
+        html = render_short_html(quote=SAMPLE_QUOTE, svg_path=None, portrait=False)
+        assert "width: 1920px; height: 1080px" in html
+        assert "divider-line" in html
+        assert "34px" in html  # smaller quote text

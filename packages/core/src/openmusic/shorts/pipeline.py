@@ -5,6 +5,7 @@ and ffmpeg compositing into a single configurable flow.
 """
 
 import logging
+import shutil
 import tempfile
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -36,7 +37,9 @@ class ShortConfig:
     clip_duration: int = 30
     output_path: str = ""
     make_shorts: bool = True
+    portrait: bool = True
     svg_path: Optional[str] = None
+    theme: str = "default"
     tags: list[str] = field(default_factory=lambda: [
         "stoic", "dub techno", "meditation", "philosophy", "openmusic",
     ])
@@ -81,6 +84,8 @@ class ShortsPipeline:
             quote=quote,
             svg_path=config.svg_path,
             duration=config.clip_duration,
+            portrait=config.portrait,
+            theme=config.theme,
         )
 
         with tempfile.NamedTemporaryFile(
@@ -94,8 +99,13 @@ class ShortsPipeline:
         record_duration = config.clip_duration + 2
         raw_video_path = ""
 
+        # Use appropriate renderer dimensions
+        renderer = self.renderer
+        if config.portrait and (renderer.width != 1080 or renderer.height != 1920):
+            renderer = ShortsRenderer(width=1080, height=1920)
+
         try:
-            if not self.renderer.is_available():
+            if not renderer.is_available():
                 raise PlaywrightNotAvailableError(
                     "Playwright is not available. "
                     "Install with: pip install playwright && playwright install chromium"
@@ -104,7 +114,7 @@ class ShortsPipeline:
             with tempfile.NamedTemporaryFile(suffix=".webm", delete=False) as tmp:
                 raw_video_path = tmp.name
 
-            self.renderer.record_html(
+            renderer.record_html(
                 html_path=html_path,
                 output_path=raw_video_path,
                 duration=record_duration,
@@ -138,7 +148,12 @@ class ShortsPipeline:
 
             self._progress("merge", 80)
 
-            if config.make_shorts:
+            if config.portrait:
+                # Native portrait render — skip shorts conversion
+                final_output = config.output_path or f"short_{config.audio_start_time:.0f}s.mp4"
+                shutil.move(merged_path, final_output)
+            elif config.make_shorts:
+                # Landscape render — convert to 9:16
                 final_output = config.output_path or f"short_{config.audio_start_time:.0f}s.mp4"
                 convert_to_shorts(
                     input_path=merged_path,
@@ -151,7 +166,7 @@ class ShortsPipeline:
                     pass
             else:
                 final_output = config.output_path or f"short_{config.audio_start_time:.0f}s.mp4"
-                Path(merged_path).rename(final_output)
+                shutil.move(merged_path, final_output)
 
             for p in [raw_video_path, audio_segment_path]:
                 try:

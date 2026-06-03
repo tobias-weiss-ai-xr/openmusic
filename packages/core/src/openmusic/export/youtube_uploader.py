@@ -4,6 +4,7 @@ Primary: YouTube Data API v3 with OAuth 2.0
 Fallback: youtube-up package (browser cookies, no quota)
 """
 
+import datetime
 import json
 import logging
 import time
@@ -54,6 +55,8 @@ class YouTubeUploadConfig:
     client_secrets_file: str = "client_secrets.json"
     token_file: str = "youtube_token.json"
     cookies_file: str = "cookies.txt"  # For youtube-up fallback
+    scheduled_upload: datetime.datetime | None = None  # Future publish date (youtube-up/yt-upload)
+    backend: str = "auto"  # "auto", "youtube-up", "yt-upload", "api"
 
 
 class YouTubeAPIUploader:
@@ -376,6 +379,61 @@ def _ensure_tab_separated_cookies(path_str: str) -> str:
     return path_str
 
 
+class YtUploadBackend:
+    """Uploader using yt-upload Playwright-based backend (persistent profile)."""
+
+    def __init__(self, config: YouTubeUploadConfig):
+        self.config = config
+
+    def is_available(self) -> bool:
+        try:
+            import yt_upload  # noqa: F401
+            return True
+        except ImportError:
+            return False
+
+    def upload(self, video_path: str) -> str:
+        from openmusic.export.yt_upload_backend import upload_video, YtUploadConfig
+        from openmusic.export.yt_upload_backend import ensure_cookies_json
+
+        video_file = Path(video_path)
+        if not video_file.exists():
+            raise YouTubeUploadError(f"Video file not found: {video_path}")
+
+        json_path = ensure_cookies_json(
+            cookies_txt=self.config.cookies_file,
+        )
+        if not json_path:
+            raise YouTubeUploadError(
+                "No cookies file found for yt-upload backend. "
+                "Create cookies_kingofdub.txt or cookies_kingofdub.json."
+            )
+
+        yt_cfg = YtUploadConfig(
+            cookies_json=json_path,
+            scheduled_publish=self.config.scheduled_upload,
+        )
+
+        try:
+            video_url = upload_video(
+                video_path=str(video_file),
+                title=self.config.title,
+                description=self.config.description,
+                privacy=self.config.privacy,
+                scheduled_publish=self.config.scheduled_upload,
+                tags=self.config.tags,
+                playlist=self.config.playlist_title,
+                config=yt_cfg,
+            )
+            video_id = video_url.split("watch?v=")[-1]
+            logger.info(
+                f"Video uploaded successfully (yt-upload): {video_url}"
+            )
+            return video_id
+        except Exception as e:
+            raise YouTubeUploadError(f"yt-upload backend failed: {e}") from e
+
+
 class YouTubeUpFallback:
     """Fallback uploader using youtube-up package (no API quota)."""
 
@@ -461,6 +519,7 @@ class YouTubeUpFallback:
                 category=CategoryEnum.MUSIC,
                 privacy=privacy,
                 playlists=playlists,
+                scheduled_upload=self.config.scheduled_upload,
             )
 
             # Create session from cookies
@@ -490,9 +549,24 @@ class YouTubeUploader:
         self.config = config or YouTubeUploadConfig()
         self.api_uploader = YouTubeAPIUploader(self.config)
         self.fallback_uploader = YouTubeUpFallback(self.config)
+        self.yt_uploader = YtUploadBackend(self.config)
 
     def upload(self, video_path: str) -> str:
-        """Upload a video with automatic fallback. Returns the video ID."""
+        """Upload a video. Returns the video ID.
+
+        Backend selection (config.backend):
+          "yt-upload"  -> yt-upload Playwright backend
+          "youtube-up" -> youtube-up cookie-based backend
+          "api"        -> YouTube Data API v3 OAuth only
+          "auto"       -> try OAuth, fallback to youtube-up
+        """
+        if self.config.backend == "yt-upload":
+            return self.yt_uploader.upload(video_path)
+        elif self.config.backend == "youtube-up":
+            return self.fallback_uploader.upload(video_path)
+        elif self.config.backend == "api":
+            return self.api_uploader.upload(video_path)
+
         # Skip API uploader if no client_secrets configured
         if not self.config.client_secrets_file:
             logger.info(

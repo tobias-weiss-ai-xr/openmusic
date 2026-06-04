@@ -2,6 +2,8 @@
 
 Combines quote selection, HTML templating, Playwright recording,
 and ffmpeg compositing into a single configurable flow.
+
+Supports both Stoic quotes and DevOps tips content types.
 """
 
 import logging
@@ -9,7 +11,7 @@ import shutil
 import tempfile
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Callable, Optional
+from typing import Callable, Optional, Union
 
 from openmusic.shorts.quotes import StoicQuote, get_random_quote
 from openmusic.shorts.templates import render_short_html
@@ -20,6 +22,9 @@ from openmusic.shorts.compositor import (
     convert_to_shorts,
     CompositorError,
 )
+
+from openmusic.shorts.devops_content import DevOpsTip, get_random_devops_tip
+from openmusic.shorts.devops_templates import render_devops_html
 
 logger = logging.getLogger(__name__)
 
@@ -32,6 +37,7 @@ class ShortConfig:
     quote_text: Optional[str] = None
     quote_author: Optional[str] = None
     quote_seed: Optional[int] = None
+    devops_seed: Optional[int] = None
     audio_path: str = ""
     audio_start_time: float = 0.0
     clip_duration: int = 30
@@ -63,7 +69,9 @@ class ShortsPipeline:
         logger.info("[%s] %.0f%%", stage, percent)
 
     def generate_short(self, config: ShortConfig) -> str:
-        """Run the full pipeline: quote selection → HTML → record → compose.
+        """Run the full pipeline: quote → HTML → record → compose.
+
+        Supports both StoicQuote and DevOpsTip content types.
 
         Args:
             config: Configuration for the short.
@@ -71,22 +79,42 @@ class ShortsPipeline:
         Returns:
             Path to the final output video file.
         """
-        if config.quote:
+        if config.devops_seed is not None:
+            tip = get_random_devops_tip(seed=config.devops_seed)
+            html_content = render_devops_html(
+                tip=tip,
+                svg_path=config.svg_path,
+                duration=config.clip_duration,
+            )
+        elif config.quote:
             quote = config.quote
+            html_content = render_short_html(
+                quote=quote,
+                svg_path=config.svg_path,
+                duration=config.clip_duration,
+                portrait=config.portrait,
+                theme=config.theme,
+            )
         elif config.quote_text and config.quote_author:
             quote = StoicQuote(config.quote_text, config.quote_author)
+            html_content = render_short_html(
+                quote=quote,
+                svg_path=config.svg_path,
+                duration=config.clip_duration,
+                portrait=config.portrait,
+                theme=config.theme,
+            )
         else:
             quote = get_random_quote(seed=config.quote_seed)
+            html_content = render_short_html(
+                quote=quote,
+                svg_path=config.svg_path,
+                duration=config.clip_duration,
+                portrait=config.portrait,
+                theme=config.theme,
+            )
 
-        self._progress("quote", 5)
-
-        html_content = render_short_html(
-            quote=quote,
-            svg_path=config.svg_path,
-            duration=config.clip_duration,
-            portrait=config.portrait,
-            theme=config.theme,
-        )
+        self._progress("html", 15)
 
         with tempfile.NamedTemporaryFile(
             suffix=".html", delete=False, mode="w", encoding="utf-8"
@@ -94,7 +122,7 @@ class ShortsPipeline:
             f.write(html_content)
             html_path = f.name
 
-        self._progress("html", 15)
+        self._progress("html", 30)
 
         record_duration = config.clip_duration + 2
         raw_video_path = ""

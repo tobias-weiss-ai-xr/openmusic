@@ -62,7 +62,7 @@ class YouTubeUploadConfig:
 class YouTubeAPIUploader:
     """Uploads using YouTube Data API v3 with OAuth 2.0."""
 
-    SCOPES = ["https://www.googleapis.com/auth/youtube.upload"]
+    SCOPES = ["https://www.googleapis.com/auth/youtube"]
 
     def __init__(self, config: YouTubeUploadConfig):
         self.config = config

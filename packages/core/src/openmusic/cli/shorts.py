@@ -295,7 +295,7 @@ def list_quotes(author: str | None):
         quotes = QUOTES
 
     for i, q in enumerate(quotes, 1):
-        click.echo(f"{i:3d}. \\"{q.text}\\" — {q.author}")
+        click.echo(f"{i:3d}. \"{q.text}\" — {q.author}")
 
 
 @short.command(name="devops-generate")
@@ -375,8 +375,8 @@ def devops_generate(
         elif language_lower:
             raise click.ClickException(f"No tips found for language '{language}'")
 
+    import random
     if not seed:
-        import random
         tip = random.choice(tips)
     else:
         rng = random.Random(seed)
@@ -483,7 +483,7 @@ def devops_generate(
             + ([tip.category] if tip.category else [])
             + ([tip.language] if tip.language else []),
             privacy="unlisted",
-            playlist_title=None,
+            playlist_title="DevOps Tips | GraphWiz",
             cookies_file=cookies_path,
         )
         uploader = YouTubeUploader(upload_config)

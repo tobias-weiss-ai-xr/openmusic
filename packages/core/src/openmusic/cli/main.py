@@ -55,6 +55,7 @@ def _build_config_from_flags(
     generate_cover: bool = False,
     cover_theme: str = "dark_industrial",
     model: str = "ace-step",
+    use_bayesian_markov: bool = False,
 ) -> MixConfig:
     seconds = _parse_length_to_seconds(length)
     return MixConfig(
@@ -67,6 +68,7 @@ def _build_config_from_flags(
         generate_cover=generate_cover,
         cover_theme=cover_theme,
         model=model,
+        use_bayesian_markov=use_bayesian_markov,
     )
 
 
@@ -123,6 +125,12 @@ def main():
     default="ace-step",
     help="Audio generation model (default: ace-step)",
 )
+@click.option(
+    "--use-bayesian-markov",
+    is_flag=True,
+    default=False,
+    help="Use Bayesian Markov pattern system to reuse pre-generated segments (~80% speedup)",
+)
 def generate(
     length: str,
     bpm: int,
@@ -135,6 +143,7 @@ def generate(
     cover_theme: str,
     cover_image: Optional[str],
     model: str,
+    use_bayesian_markov: bool,
 ):
     """Generate a new mix using MixOrchestrator.
 
@@ -405,6 +414,12 @@ def upload(
     default="ace-step",
     help="Audio generation model (default: ace-step)",
 )
+@click.option(
+    "--use-bayesian-markov",
+    is_flag=True,
+    default=False,
+    help="Use Bayesian Markov pattern system to reuse pre-generated segments (~80% speedup)",
+)
 def publish(
     length: str,
     bpm: int,
@@ -428,6 +443,7 @@ def publish(
     key_schedule: Optional[str],
     effects_modifiers: Optional[str],
     model: str,
+    use_bayesian_markov: bool,
 ):
     """Generate mix, render MP4 with ffmpeg, and upload to YouTube in one command."""
     click.echo("Starting full publish pipeline...")
@@ -471,6 +487,7 @@ def publish(
             key_schedule=key_schedule,
             effects_modifiers=effects_modifiers,
             model=model,
+            use_bayesian_markov=use_bayesian_markov,
         )
         orchestrator = MixOrchestrator(mix_config)
         mix_path = orchestrator.generate_mix()

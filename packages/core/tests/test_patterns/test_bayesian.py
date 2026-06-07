@@ -1,283 +1,70 @@
 """Tests for Bayesian pattern selector using Thompson sampling."""
 
 import pytest
-from openmusic.patterns.bayesian import (
-    BayesianPatternSelector,
-    PriorType,
-    SELECTION_COUNT_THRESHOLD,
-)
+from openmusic.patterns.bayesian import BayesianPatternSelector
+from openmusic.patterns.pattern_library import PatternLibrary, PatternEntry
 
 
-class TestBetaPosterior:
-    """Tests for Beta posterior update logic."""
+class TestBayesianPatternSelector:
+    """Tests for Bayesian pattern selector."""
 
-    def test_update_success(self):
-        """Increment successes and failures."""
-        selector = BayesianPatternSelector(prior_type=PriorType.UNIFORM)
-        selector._update_beta("p1", success=True)
-        assert selector.beta_stats["p1"].alpha == 2
-        assert selector.beta_stats["p1"].beta == 1
+    def test_empty_candidates_returns_none(self):
+        """Returns None when no candidates are provided."""
+        library = PatternLibrary()
+        selector = BayesianPatternSelector(library)
+        result = selector.select([])
+        assert result is None
 
-    def test_update_failure(self):
-        """Increment failures only."""
-        selector = BayesianPatternSelector(prior_type=PriorType.UNIFORM)
-        selector._update_beta("p2", success=False)
-        assert selector.beta_stats["p2"].alpha == 1
-        assert selector.beta_stats["p2"].beta == 2
+    def test_selects_from_single_candidate(self):
+        """Selects the only available candidate."""
+        library = PatternLibrary()
+        pattern = PatternEntry(path="test.py", name="test", description="Test pattern")
+        if library._patterns is None:
+            from openmusic.patterns.pattern_library import Patterns
+            library._patterns = Patterns(patterns=[pattern])
+        else:
+            library._patterns.patterns = [pattern]
+        selector = BayesianPatternSelector(library)
+        result = selector.select([pattern])
+        assert result == pattern
 
-    def test_update_ub_selectable(self):
-        """Upper-bounded pattern uses negative beta updates."""
-        selector = BayesianPatternSelector(prior_type=PriorType.UNIFORM)
-        # Simulate an upper-bounded pattern living at phase climax
-        # repeated without success
-        # This should decay success counts
-        selector._update_beta("p_ub", success=False, upper_bounded=True)
-        # With upper_bounded=True, failure decrements alpha (success) and increments beta
-        assert selector.beta_stats["p_ub"].alpha == 0
-        assert selector.beta_stats["p_ub"].beta == 2
+    def test_preferences_higher_quality_candidates(self):
+        """Thompson sampling favors higher quality patterns with enough samples."""
+        library = PatternLibrary()
+        high_quality = PatternEntry(path="high.py", name="high", description="High quality")
+        high_quality.quality_score = 0.9
+        high_quality.play_count = 10
+        low_quality = PatternEntry(path="low.py", name="low", description="Low quality")
+        low_quality.quality_score = 0.3
+        low_quality.play_count = 10
 
-    def test_update_exploration_success(self):
-        """Rotation-based thetas get high-alpha probability of being chosen again."""
-        selector = BayesianPatternSelector(prior_type=PriorType.UNIFORM)
-        selector._update_beta("rot_1", success=True, exploration=True)
+        if library._patterns is None:
+            from openmusic.patterns.pattern_library import Patterns
+            library._patterns = Patterns(patterns=[high_quality, low_quality])
+        else:
+            library._patterns.patterns = [high_quality, low_quality]
 
-        # Exploratory selectors get strong reinforcement: alpha climbs, beta stays low
-        assert selector.beta_stats["rot_1"].alpha >= 2
-        assert selector.beta_stats["rot_1"].beta == 1
-
-
-class TestRotationMechanism:
-    """Tests for the rotation mechanism of lesser-used patterns."""
-
-    def test_all_below_threshold(self):
-        """All patterns below threshold → rotate."""
-        selector = BayesianPatternSelector(prior_type=PriorType.UNIFORM)
-        for i in range(5):
-            selector._update_beta(f"p{i}", success=False)
-
-        candidates = selector._get_rotation_candidates()
-        assert len(candidates) == 5
-
-    def test_one_above_threshold(self):
-        """One pattern over threshold → excluded from rotation."""
-        selector = BayesianPatternSelector(prior_type=PriorType.UNIFORM)
-
-        # p0 crosses threshold, p1-p4 below
-        for _ in range(SELECTION_COUNT_THRESHOLD + 2):
-            selector._update_beta("p0", success=True)
-        for i in range(1, 5):
-            selector._update_beta(f"p{i}", success=False)
-
-        candidates = selector._get_rotation_candidates()
-        assert "p0" not in candidates
-        assert len(candidates) == 4
-
-    def test_uniform_distribution(self):
-        """Rotation step should be uniform (all candidates same probability)."""
-        selector = BayesianPatternSelector(prior_type=PriorType.UNIFORM)
-
-        for i in range(3):
-            selector._update_beta(f"p{i}", success=False)
-
-        candidates = selector._get_rotation_candidates()
-        rotation_dist = {p: 1.0 / 3.0 for p in candidates}
-
-        for _ in range(1000):
-            p = selector._select_rotation(candidates)
-            rotation_dist[p] += 0.001
-        # All three patterns should be selected roughly equally
-        counts = {p: int(rot * 1000) for p, rot in rotation_dist.items()}
-        # Arrange: sort counts
-        sorted_counts = sorted(counts.values())
-        # The difference between min and max should not be huge (within ~30%)
-        assert sorted_counts[-1] - sorted_counts[0] <= 300
-
-
-class TestThompsonSampling:
-    """Tests for guided selection via Thompson sampling."""
-
-    def test_select_returns_string(self):
-        """Select should always return a string pattern_id."""
-        selector = BayesianPatternSelector(prior_type=PriorType.UNIFORM)
-
-        # pylint: disable=no-member
-        for _ in range(10):
-            p_id = selector.select(pattern_ids=["p1", "p2", "p3"])
-            assert isinstance(p_id, str)
-
-    def test_select_all_equal_so_far(self):
-        """With uniform priors and no history, selection should be roughly equal."""
-        selector = BayesianPatternSelector(prior_type=PriorType.UNIFORM)
-
-        counts = {"p1": 0, "p2": 0, "p3": 0}
-        total = 1000
-        for _ in range(total):
-            p_id = selector.select(pattern_ids=["p1", "p2", "p3"])
-            counts[p_id] += 1
-
-        # After many samples, distribution should be roughly uniform
-        # (Monte Carlo approximation of Multivariate Beta)
-        for p_id, count in counts.items():
-            ratio = count / total
-            # Allow t=20% deviation due to randomness
-            assert 0.25 < ratio < 0.45
-
-    def test_select_prefer_winning(self):
-        """After some history, stronger patterns should be chosen more often."""
-        selector = BayesianPatternSelector(prior_type=PriorType.UNIFORM)
-
-        # "winning" gets 15 successes, "losing" gets 0 successes, both 5 failures
-        for _ in range(15):
-            selector._update_beta("winning", success=True)
-            selector._update_beta("losing", success=False)
-
-        for _ in range(5):
-            selector._update_beta("winning", success=False)
-            selector._update_beta("losing", success=False)
-
-        counts = {"winning": 0, "losing": 0}
-        total = 1000
-        for _ in range(total):
-            p_id = selector.select(pattern_ids=["winning", "losing"])
-            counts[p_id] += 1
-
-        # winning should dominate selection
-        assert counts["winning"] > counts["losing"] * 3
-
-    def test_select_with_upper_bounded(self):
-        """Upper-bounded patterns should not dominate when not winning."""
-        selector = BayesianPatternSelector(prior_type=PriorType.UNIFORM)
-
-        # One "climax-only" pattern chosen early but never successful
-        selector._update_beta("climax", success=False, upper_bounded=True)
-
-        # The remaining patterns have no history
-        candidates = ["climax", "a", "b", "c"]
-        counts = {p: 0 for p in candidates}
-        total = 500
-        for _ in range(total):
-            p_id = selector.select(pattern_ids=candidates)
-            counts[p_id] += 1
-
-        # "climax" should be selected less often than the others
-        assert counts["climax"] < counts["a"]
-
-
-class TestPriorTypes:
-    """Tests for different Beta prior configurations."""
-
-    def test_jeffreys_results(self):
-        """Jeffreys prior (1,1) gives more conservative early exploration."""
-        selector = BayesianPatternSelector(prior_type=PriorType.JEFFREYS)
-
-        # No history: each pattern has Uniform(0,1) draws
-        # After 1 success and 0 failures: Beta(2,1) is slightly shifted toward p=1
-        # After 0 successes and 1 failure: Beta(1,2) slightly shifted toward 0
-
-        selector._update_beta("p1", success=True)
-        selector._update_beta("p2", success=False)
-
-        counts = {"p1": 0, "p2": 0}
-        total = 200
-        for _ in range(total):
-            p_id = selector.select(pattern_ids=["p1", "p2"])
-            counts[p_id] += 1
-
-        # p1 (winning) should be chosen more often than p2 (losing)
-        assert counts["p1"] > counts["p2"]
-
-    def test_gill_results(self):
-        """Gill prior (0.5, 0.5) gives more aggressive early exploration."""
-        # With Gill prior, Beta(0.5, 0.5) prior + 1 success + 0 failures
-        # = Beta(1.5, 0.5), which mean more variance than Jeffreys’ Beta(2, 1)
-        selector = BayesianPatternSelector(prior_type=PriorType.GILL)
-
-        selector._update_beta("p1", success=True)
-        selector._update_beta("p2", success=False)
-
-        counts = {"p1": 0, "p2": 0}
-        total = 200
-        for _ in range(total):
-            p_id = selector.select(pattern_ids=["p1", "p2"])
-            counts[p_id] += 1
-
-        # Still p1 > p2, but the margin should be larger than with Jeffreys
-        # (More variance means more samples favoring p1 when it’s early-winning)
-        assert counts["p1"] > counts["p2"] * 2
-
-
-class TestIntegration:
-    """End-to-end integration-style tests."""
-
-    def test_lifecycle_scenario(self):
-        """Simulate a selection lifecycle with rotation and Thompson sampling."""
-        selector = BayesianPatternSelector(prior_type=PriorType.UNIFORM)
-
-        # Initial batch: all 6 patterns selected once each
-        for i in range(6):
-            p_id = f"p{i}"
-            selector._update_beta(p_id, success=i % 2 == 0)
-
-        # Next few rounds: rotation should favor underrepresented patterns
-        # between Thompson updates
-        candidates = [f"p{i}" for i in range(6)]
-        selections = []
+        selector = BayesianPatternSelector(library)
+        # With enough samples, should typically select high quality
+        high_wins = 0
         for _ in range(20):
-            p_id = selector.select(pattern_ids=candidates)
-            selections.append(p_id)
-            selector._update_beta(p_id, success=True)
+            result = selector.select([high_quality, low_quality])
+            if result == high_quality:
+                high_wins += 1
+        assert high_wins >= 15  # Should be strongly biased toward high quality
 
-        # All candidates should still be represented across selections
-        for p_id in candidates:
-            assert p_id in selections
+    def test_quality_feedback_updates_scores(self):
+        """Setting quality feedback updates the pattern's quality score."""
+        library = PatternLibrary()
+        pattern = PatternEntry(path="test.py", name="test", description="Test pattern")
+        if library._patterns is None:
+            from openmusic.patterns.pattern_library import Patterns
+            library._patterns = Patterns(patterns=[pattern])
+        else:
+            library._patterns.patterns = [pattern]
 
-    def test_downsampling_thetas(self):
-        """theta distribution (rarely used patterns) should see occasional uplift."""
-        selector = BayesianPatternSelector(prior_type=PriorType.UNIFORM)
+        selector = BayesianPatternSelector(library)
+        selector.set_quality_feedback("test.py", 0.8)
 
-        # Simulate old patterns heavily used, new patterns rarely used
-        for _ in range(20):
-            selector._update_beta("old", success=True)
-
-        for i in range(5):
-            selector._update_beta(f"theta{i}", success=False)
-
-        candidates = ["old", "theta0", "theta1", "theta2", "theta3", "theta4"]
-        selections = [selector.select(pattern_ids=candidates) for _ in range(200)]
-
-        # Thetas should not be completely absent — rotation gives them a chance
-        theta_counts = sum(1 for s in selections if s.startswith("theta"))
-        assert theta_counts >= 10  # Should appear at least 10 times
-
-    def test_fallback_to_uniform_distribution(self):
-        """If rotation fails (no candidates), choose uniformly over pattern_ids."""
-        selector = BayesianPatternSelector(prior_type=PriorType.UNIFORM)
-
-        # No history yet — so no rotation candidates
-        candidates = ["p1", "p2", "p3", "p4", "p5"]
-
-        # Force rotation to have no candidates
-        # (Simulate all patterns well above threshold)
-        for p_id in candidates:
-            for _ in range(SELECTION_COUNT_THRESHOLD * 2):
-                selector._update_beta(p_id, success=True)
-
-        # Select many times
-        counts = {p: 0 for p in candidates}
-        for _ in range(500):
-            p_id = selector.select(pattern_ids=candidates)
-            counts[p_id] += 1
-
-        # Distribution should be uniform (fallback worked)
-        # All counts should be relatively equal (within ~15%)
-        values = list(counts.values())
-        max_val = max(values)
-        min_val = min(values)
-        avg = sum(values) / len(values)
-
-        deviation = (max_val - min_val) / avg
-        assert deviation < 0.15
-
-
-if __name__ == "__main__":
-    pytest.main([__file__, "-v"])
+        # The quality score should have been updated
+        assert pattern.quality_score == 0.8

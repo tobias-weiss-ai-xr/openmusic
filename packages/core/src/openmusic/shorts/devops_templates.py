@@ -105,7 +105,7 @@ body {{
   position: relative;
   z-index: 2;
   display: grid;
-  grid-template-rows: 72% 28%;
+  grid-template-rows: 64% 36%;
   height: 100%;
   width: 100%;
 }}
@@ -113,9 +113,9 @@ body {{
 /* code pane */
 .code-pane {{
   font-family: 'Fira Code', 'JetBrains Mono', 'Consolas', monospace;
-  font-size: 42px;
-  line-height: 1.6;
-  padding: 60px 50px 40px 50px;
+  font-size: 38px;
+  line-height: 1.5;
+  padding: 56px 50px 36px 50px;
   overflow: hidden;
   background: rgba(26,27,38,0.85);
   backdrop-filter: blur(8px);
@@ -128,7 +128,7 @@ body {{
 }}
 
 .code-pane pre {{
-  font-size: 38px;
+  font-size: 34px;
   white-space: pre-wrap;
   word-break: break-word;
   margin: 0;
@@ -214,16 +214,17 @@ body {{
 
 /* tip pane */
 .tip-pane {{
-  padding: 30px 50px 50px 50px;
+  padding: 28px 60px 40px 60px;
   display: flex;
   flex-direction: column;
   justify-content: center;
   align-items: center;
-  background: rgba(2,2,4,0.9);
+  background: rgba(2,2,4,0.92);
   position: relative;
   transform: translateY(100%);
   animation: tipSlideUp 0.8s cubic-bezier(0.22, 1, 0.36, 1) forwards;
   animation-delay: 1.2s;
+  overflow: hidden;
 }}
 
 @keyframes tipSlideUp {{
@@ -233,16 +234,17 @@ body {{
 
 .tip-title {{
   font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif;
-  font-size: 44px;
+  font-size: 42px;
   font-weight: 600;
   color: #c8b898;
   letter-spacing: 0.5px;
-  margin-bottom: 16px;
+  margin-bottom: 12px;
   text-align: center;
   text-shadow: 0 0 40px rgba(200,184,152,0.12);
   opacity: 0;
   animation: fadeInUp 0.6s ease-out forwards;
   animation-delay: 1.6s;
+  max-width: 960px;
 }}
 
 @keyframes fadeInUp {{
@@ -252,18 +254,22 @@ body {{
 
 .tip-description {{
   font-family: 'SF Pro Text', -apple-system, BlinkMacSystemFont, sans-serif;
-  font-size: 34px;
+  font-size: 32px;
   font-weight: 300;
   color: #9ba3b8;
-  line-height: 1.4;
+  line-height: 1.35;
   text-align: center;
-  max-width: 900px;
+  max-width: 920px;
   opacity: 0;
   animation: fadeInUp 0.6s ease-out forwards;
   animation-delay: 1.9s;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }}
 
-/* end card */
+/* end card - fades in over tip content */
 .end-card {{
   position: absolute;
   top: 0; left: 0;
@@ -273,34 +279,50 @@ body {{
   flex-direction: column;
   justify-content: center;
   align-items: center;
-  background: radial-gradient(ellipse at center, rgba(122,162,247,0.04) 0%, transparent 70%);
+  background: radial-gradient(ellipse at center, rgba(122,162,247,0.05) 0%, transparent 70%);
   z-index: 10;
   opacity: 0;
   pointer-events: none;
-  transition: opacity 1s ease;
+  transition: opacity 0.8s ease;
 }}
 
 .end-card.show {{
   opacity: 1;
 }}
 
+.end-card .ring {{
+  position: absolute;
+  width: 240px;
+  height: 240px;
+  border-radius: 50%;
+  border: 1px solid rgba(200,184,152,0.15);
+  animation: ringPulse 4s ease-in-out infinite;
+}}
+
+@keyframes ringPulse {{
+  0%, 100% {{ transform: scale(1); opacity: 0.4; }}
+  50% {{ transform: scale(1.08); opacity: 0.8; }}
+}}
+
 .end-card .logo {{
   font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif;
-  font-size: 52px;
+  font-size: 48px;
   font-weight: 700;
   color: #c8b898;
-  letter-spacing: 4px;
+  letter-spacing: 6px;
   text-shadow: 0 0 60px rgba(200,184,152,0.2);
-  margin-bottom: 12px;
+  margin-bottom: 16px;
+  z-index: 1;
 }}
 
 .end-card .tagline {{
   font-family: 'SF Pro Text', -apple-system, BlinkMacSystemFont, sans-serif;
-  font-size: 28px;
+  font-size: 24px;
   font-weight: 300;
   color: #7aa2f7;
-  letter-spacing: 6px;
+  letter-spacing: 8px;
   text-transform: uppercase;
+  z-index: 1;
 }}
 
 @media (prefers-color-scheme: dark) {{
@@ -471,6 +493,7 @@ def render_devops_html(
     <div class="tip-title">{_escape_html(tip.title)}</div>
     <div class="tip-description">{_escape_html(tip.description)}</div>
     <div id="end-card" class="end-card">
+      <div class="ring"></div>
       <div class="logo">✦ GRAPHWIZ</div>
       <div class="tagline">graphwiz.ai</div>
     </div>

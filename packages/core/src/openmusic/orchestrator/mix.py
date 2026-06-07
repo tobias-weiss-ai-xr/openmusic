@@ -13,6 +13,8 @@ import soundfile as sf
 
 from openmusic.acestep import ACEStepGenerator
 from openmusic.bridge.typescript_bridge import TypeScriptBridge
+from openmusic.patterns import PatternLibrary, PhaseTransitionMatrix, BayesianPatternSelector
+from openmusic.patterns.markov import Phase
 from openmusic.generators import AudioGenerator, StableAudioGenerator
 
 logger = logging.getLogger(__name__)
@@ -352,6 +354,9 @@ class MixConfig:
     bpm_schedule: Optional[str] = None
     key_schedule: Optional[str] = None
     model: str = "ace-step"
+    use_bayesian_markov: bool = False
+    pattern_style: str = "dub_techno"
+    pattern_library_path: str = ""
 
     def bpm_for_segment(self, index: int) -> int:
         sched = _parse_schedule(self.bpm_schedule, self.bpm)
@@ -390,6 +395,17 @@ class MixOrchestrator:
                 self._bridge = TypeScriptBridge()
         else:
             self._bridge = TypeScriptBridge()
+
+        # Initialize Bayesian Markov pattern system
+        self._pattern_library: Optional[PatternLibrary] = None
+        self._phase_matrix: Optional[PhaseTransitionMatrix] = None
+        self._pattern_selector: Optional[BayesianPatternSelector] = None
+        if config.use_bayesian_markov:
+            from openmusic.patterns.markov import StyleFactory
+            lib_path = config.pattern_library_path or "patterns/pattern_library.json"
+            self._pattern_library = PatternLibrary(lib_path)
+            self._phase_matrix = StyleFactory.create(config.pattern_style)
+            self._pattern_selector = BayesianPatternSelector(self._pattern_library)
 
         # Keep bridge attribute for backward compatibility with tests
         self.bridge = self._bridge if self._bridge is not None else TypeScriptBridge()
@@ -430,6 +446,47 @@ class MixOrchestrator:
         return Path(self.config.output_path)
 
     def _generate_segment(self, index: int, total: int) -> Path:
+        use_patterns = (
+            self.config.use_bayesian_markov
+            and self._pattern_library is not None
+            and self._phase_matrix is not None
+            and self._pattern_selector is not None
+        )
+
+        if use_patterns:
+            return self._generate_segment_from_pattern(index, total)
+
+        stage_id = _get_stage_for_segment(index, total)
+        prompt = self._get_segment_prompt(index, total, stage_id=stage_id)
+        seg_bpm = self.config.bpm_for_segment(index)
+        seg_key = self.config.key_for_segment(index)
+        return self.generator.generate_texture(
+            prompt=prompt,
+            duration=int(self.config.segment_duration),
+            bpm=seg_bpm,
+            key=seg_key,
+        )
+
+    def _generate_segment_from_pattern(self, index: int, total: int) -> Path:
+        phase = self._phase_matrix.generate_sequence(total, start=Phase.INTRO)[index]
+        candidates = self._pattern_library.get_by_phase(phase.value)
+
+        if not candidates or not self._pattern_selector:
+            stage_id = _get_stage_for_segment(index, total)
+            prompt = self._get_segment_prompt(index, total, stage_id=stage_id)
+            seg_bpm = self.config.bpm_for_segment(index)
+            seg_key = self.config.key_for_segment(index)
+            return self.generator.generate_texture(
+                prompt=prompt,
+                duration=int(self.config.segment_duration),
+                bpm=seg_bpm,
+                key=seg_key,
+            )
+
+        selected = self._pattern_selector.select(candidates)
+        if selected:
+            return Path(selected.path)
+
         stage_id = _get_stage_for_segment(index, total)
         prompt = self._get_segment_prompt(index, total, stage_id=stage_id)
         seg_bpm = self.config.bpm_for_segment(index)

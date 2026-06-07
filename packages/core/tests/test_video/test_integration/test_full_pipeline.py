@@ -5,7 +5,6 @@ from openmusic.video.state import initialize_video_pipeline_state
 from openmusic.video.nodes import (
     generate_all_audio_segments,
     generate_image_for_stage,
-    images_join,
     apply_per_stage_audio_automation,
     render_video_with_crossfades,
     upload_to_youtube,
@@ -15,7 +14,6 @@ from openmusic.video.nodes import (
 def test_all_nodes_importable():
     assert generate_all_audio_segments is not None
     assert generate_image_for_stage is not None
-    assert images_join is not None
     assert apply_per_stage_audio_automation is not None
     assert render_video_with_crossfades is not None
     assert upload_to_youtube is not None

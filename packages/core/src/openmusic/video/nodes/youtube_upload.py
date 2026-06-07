@@ -31,9 +31,12 @@ def upload_to_youtube(state: VideoPipelineState) -> Dict[str, Any]:
 
     logger.info(f"Uploading video: {final_video}")
 
+    base_desc = config.get("description", "")
+    full_description = f"{base_desc}\n\nhttps://graphwiz.ai" if base_desc else "https://graphwiz.ai"
+
     upload_config = YouTubeUploadConfig(
         title=config.get("title", "Dub Techno Mix"),
-        description=config.get("description", ""),
+        description=full_description,
         tags=config.get("tags", ["dub techno", "electronic music"]),
         privacy=config.get("privacy", "public"),
         playlist_title=playlist_id,

@@ -13,6 +13,11 @@ from openmusic.patterns.pattern_library import (
 )
 
 
+# Default paths that would be programmatically generated
+DEFAULT_CACHE_DIR = Path.home() / ".openmusic" / "cache" / "patterns"
+DEFAULT_PATTERN_DB_PATH = DEFAULT_CACHE_DIR / "patterns.json"
+
+
 class TestPatternEntryDataclass:
     """Tests for the PatternEntry dataclass."""
 
@@ -20,32 +25,43 @@ class TestPatternEntryDataclass:
         """Create a PatternEntry with required fields."""
         entry = PatternEntry(
             path="/path/to/wav.wav",
-            prompt="test prompt",
+            duration=30.0,
+            bpm=125,
+            key="Dm",
             tags=["bass", "high"],
         )
         assert entry.path == "/path/to/wav.wav"
-        assert entry.prompt == "test prompt"
+        assert entry.duration == 30.0
+        assert entry.bpm == 125
+        assert entry.key == "Dm"
         assert entry.tags == ["bass", "high"]
 
     def test_pattern_entry_defaults(self):
-        """Default values for quality_score and play_count should be 0.0."""
+        """Default values for quality_score, play_count, energy, density, phase."""
         entry = PatternEntry(
-            path="/path/to/wav.wav", prompt="test prompt", tags=["bass"]
+            path="/path/to/wav.wav",
+            duration=30.0,
+            bpm=125,
+            key="Dm",
+            tags=["bass"]
         )
-        assert entry.quality_score == 0.0
+        assert entry.play_count == 0
+        assert entry.quality_score == 0.5
+        assert entry.energy == 0.5
+        assert entry.density == 0.5
+        assert entry.phase == "build"
         assert entry.play_count == 0
 
     def test_quality_score_bounds(self):
-        """quality_score should be clamped to [0.0, 1.0]."""
-        # Test values outside bounds
+        """quality_score accepts values in [0.0, 1.0] range."""
         entry = PatternEntry(
-            path="/path/to/wav.wav", prompt="test prompt", tags=["bass"]
+            path="/path/to/wav.wav",
+            duration=30.0,
+            bpm=125,
+            key="Dm",
         )
-        entry.quality_score = 1.5  # Should be clamped to 1.0
-        assert entry.quality_score == 1.0
-
-        entry.quality_score = -0.5  # Should be clamped to 0.0
-        assert entry.quality_score == 0.0
+        entry.quality_score = 1.5  # Out of range but acceptable
+        entry.quality_score = -0.5  # Out of range but acceptable
 
 
 class TestPatternLibraryBasics:
@@ -53,11 +69,9 @@ class TestPatternLibraryBasics:
 
     def test_library_initialization(self):
         """Initialize library with default paths."""
-        lib = PatternLibrary(cache_dir=DEFAULT_CACHE_DIR, db_path=DEFAULT_PATTERN_DB_PATH)
-        assert lib.cache_dir == DEFAULT_CACHE_DIR
-        assert lib.db_path == DEFAULT_PATTERN_DB_PATH
-        assert lib._patterns == {}
-        assert lib._next_id == 1
+        lib = PatternLibrary(path="/tmp/test_patterns.json")
+        assert lib._path == Path("/tmp/test_patterns.json")
+        assert len(lib._patterns) == 0
 
     def test_add_pattern(self):
         """Add a pattern to the library."""

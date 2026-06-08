@@ -1,3 +1,3 @@
-from .main import main
+"""OpenMusic CLI package."""
 
-__all__ = ["main"]
+__all__: list[str] = []

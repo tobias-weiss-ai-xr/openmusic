@@ -1,6 +1,8 @@
 from dataclasses import dataclass
 from pathlib import Path
 
+from loguru import logger
+
 from openmusic.acestep.config import ACEStepConfig, GenerationParams
 from openmusic.acestep.cache import CacheManager
 
@@ -119,9 +121,12 @@ class ACEStepGenerator:
             )
 
         import os
+        import gc
 
         if self.device == "cuda":
             os.environ.setdefault("PYTORCH_CUDA_ALLOC_CONF", "expandable_segments:True,max_split_size_mb:256")
+            torch.cuda.empty_cache()
+            gc.collect()
 
         from acestep.handler import AceStepHandler
         from acestep.llm_inference import LLMHandler
@@ -138,13 +143,22 @@ class ACEStepGenerator:
         dit_handler = AceStepHandler()
         llm_handler = LLMHandler()
 
-        dit_handler.initialize_service(
-            project_root="ACE-Step-1.5",
-            config_path=self.config.model_path,
-            device=generation_device,
-            offload_to_cpu=offload_to_cpu,
-            offload_dit_to_cpu=offload_dit_to_cpu,
-        )
+        # Monkey-patch: force bfloat16 even on pre-Ampere GPUs (RTX 2060 = 7.5).
+        # bf16 has the same exponent range as fp32 so SFT models don't NaN on VAE decode.
+        from acestep import gpu_config as _acestep_gpu_config
+        _orig_bfloat16_check = _acestep_gpu_config.cuda_supports_bfloat16
+        _acestep_gpu_config.cuda_supports_bfloat16 = lambda device_index=None: True
+
+        try:
+            dit_handler.initialize_service(
+                project_root="ACE-Step-1.5",
+                config_path=self.config.model_path,
+                device=generation_device,
+                offload_to_cpu=offload_to_cpu,
+                offload_dit_to_cpu=offload_dit_to_cpu,
+            )
+        finally:
+            _acestep_gpu_config.cuda_supports_bfloat16 = _orig_bfloat16_check
 
         ace_params = AceParams(
             caption=prompt,
@@ -163,9 +177,61 @@ class ACEStepGenerator:
         save_dir = Path(self.cache.cache_dir) / "output"
         save_dir.mkdir(parents=True, exist_ok=True)
 
+        def _run_generation(device: str, offload: bool) -> tuple:
+            nonlocal dit_handler, llm_handler
+            del dit_handler, llm_handler
+            gc.collect()
+            if self.device == "cuda":
+                torch.cuda.empty_cache()
+            dit_handler = AceStepHandler()
+            llm_handler = LLMHandler()
+            from acestep import gpu_config as _agc
+            _orig = _agc.cuda_supports_bfloat16
+            _agc.cuda_supports_bfloat16 = lambda device_index=None: True
+            try:
+                dit_handler.initialize_service(
+                    project_root="ACE-Step-1.5",
+                    config_path=self.config.model_path,
+                    device=device,
+                    offload_to_cpu=offload,
+                    offload_dit_to_cpu=offload,
+                )
+            finally:
+                _agc.cuda_supports_bfloat16 = _orig
+            return generate_music(
+                dit_handler, llm_handler, ace_params, ace_config, save_dir=str(save_dir)
+            )
+
         result = generate_music(
             dit_handler, llm_handler, ace_params, ace_config, save_dir=str(save_dir)
         )
+
+        if not result.success and self.device == "cuda":
+            fallback_reason = None
+            if "CUDA out of memory" in (result.error or ""):
+                fallback_reason = "CUDA out of memory"
+            elif "NaN or Inf latents" in (result.error or ""):
+                fallback_reason = "NaN/Inf latents (bf16 compatibility)"
+
+            if fallback_reason:
+                logger.warning(
+                    f"{fallback_reason} during generation on CUDA. "
+                    "Falling back to CPU generation (this will be slower but should succeed)."
+                )
+                result = _run_generation("cpu", False)
+            else:
+                raise RuntimeError(f"Generation failed: {result}")
+
+        elif not result.success:
+            if self.device == "cpu" or generation_device == "cpu":
+                raise RuntimeError(
+                    "Generation timed out on CPU. The ACE-Step model requires a GPU with at least 8GB VRAM.\n"
+                    "Suggestions:\n"
+                    "  - Use a machine with a compatible NVIDIA GPU\n"
+                    "  - Reduce segment duration (e.g. --config with segment_duration: 30)\n"
+                    "  - Use '--no-effects' to skip the effects processing pipeline"
+                )
+            raise RuntimeError(f"Generation failed: {result}")
 
         if result.success and result.audios:
             output_path = Path(result.audios[0]["path"])

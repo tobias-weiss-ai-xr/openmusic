@@ -64,7 +64,6 @@ stream = [
 ]
 fingerprint = [
   "pyacoustid>=1.3.0",
-  "chromaprint>=1.5.0",
 ]
 
 [build-system]

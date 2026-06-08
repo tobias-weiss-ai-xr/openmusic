@@ -20,6 +20,7 @@ def _create_test_wav(duration_sec: float = 3.0, sample_rate: int = 44100) -> str
     audio = 0.5 * np.sin(2 * np.pi * 440 * t)
     audio = np.column_stack([audio, audio])  # stereo
     tmp = tempfile.NamedTemporaryFile(suffix=".wav", delete=False)
+    tmp.close()
     sf.write(tmp.name, audio, sample_rate)
     return tmp.name
 

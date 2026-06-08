@@ -10,6 +10,8 @@ import subprocess
 from pathlib import Path
 from typing import Any, Optional
 
+import soundfile as sf
+
 logger = logging.getLogger(__name__)
 
 
@@ -83,15 +85,20 @@ def lookup_acoustid(
     """
     fingerprint = generate_fingerprint(audio_path)
 
+    info = sf.info(audio_path)
+    duration = info.duration
+
     try:
         import acoustid  # type: ignore[import-untyped]
 
-        return acoustid.lookup(api_key, fingerprint, meta)  # type: ignore[no-any-return]
+        return acoustid.lookup(api_key, fingerprint, duration, meta=meta)
     except ImportError:
         logger.warning(
             "pyacoustid not installed. Install with: pip install pyacoustid>=1.3.0"
         )
         return None
+    except KeyboardInterrupt:
+        raise
     except Exception as e:
         logger.error("AcoustID lookup failed: %s", e)
         return {"error": str(e)}

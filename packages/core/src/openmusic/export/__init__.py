@@ -25,6 +25,12 @@ from openmusic.export.loudness import (
     measure_integrated_loudness,
     normalize_loudness,
 )
+from openmusic.export.midi_export import (
+    DEFAULT_MIDI_TEMPO,
+    export_markov_chain_to_midi,
+    export_pattern_to_midi,
+    pattern_to_isobar_sequence,
+)
 
 __all__ = [
     "AudioEncoder",
@@ -48,4 +54,8 @@ __all__ = [
     "LUFS_TARGET",
     "measure_integrated_loudness",
     "normalize_loudness",
+    "DEFAULT_MIDI_TEMPO",
+    "export_pattern_to_midi",
+    "export_markov_chain_to_midi",
+    "pattern_to_isobar_sequence",
 ]

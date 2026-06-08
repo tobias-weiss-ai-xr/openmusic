@@ -1,7 +1,10 @@
 """CLI commands for live streaming generated mixes to YouTube and other platforms."""
 
+import atexit
 import logging
+import os
 import subprocess
+import threading
 from pathlib import Path
 from typing import Optional
 
@@ -11,10 +14,15 @@ logger = logging.getLogger(__name__)
 
 STREAM_PLATFORMS = ["youtube", "twitch", "facebook"]
 
+_ffmpeg_available: Optional[bool] = None
+
 
 def _check_ffmpeg() -> bool:
-    """Check if ffmpeg is available."""
-    return (
+    """Check if ffmpeg is available (cached after first call)."""
+    global _ffmpeg_available
+    if _ffmpeg_available is not None:
+        return _ffmpeg_available
+    _ffmpeg_available = (
         subprocess.run(
             ["ffmpeg", "-version"],
             capture_output=True,
@@ -22,6 +30,7 @@ def _check_ffmpeg() -> bool:
         ).returncode
         == 0
     )
+    return _ffmpeg_available
 
 
 def _get_stream_url(platform: str, stream_key: str) -> str:
@@ -66,7 +75,8 @@ class StreamManager:
         if self.is_running:
             raise RuntimeError("Stream is already running")
 
-        if not Path(audio_path).exists():
+        audio = Path(audio_path)
+        if not audio.exists():
             raise FileNotFoundError(f"Audio file not found: {audio_path}")
 
         ingest_url = _get_stream_url(platform, stream_key)
@@ -75,30 +85,33 @@ class StreamManager:
                 f"Unsupported platform: {platform}. Options: {STREAM_PLATFORMS}"
             )
 
-        # Build ffmpeg command:
-        # - Stream audio continuously (loop)
-        # - If cover image provided, use as static video; else audio-only
+        if cover_image:
+            cover = Path(cover_image)
+            if not cover.exists():
+                logger.warning(
+                    "Cover image not found at %s, streaming audio-only", cover_image
+                )
+                cover_image = None
+
         cmd = [
             "ffmpeg",
             "-y",
-            "-re",  # Real-time rate
+            "-re",
             "-stream_loop",
-            "-1",  # Loop audio forever
+            "-1",
             "-i",
             audio_path,
         ]
 
-        if cover_image and Path(cover_image).exists():
+        if cover_image:
             cmd.extend(["-loop", "1", "-i", cover_image])
-            # Map: audio from first input, video from second
             map_flags = [
                 "-map",
-                "1:v:0",  # video from cover image
+                "1:v:0",
                 "-map",
-                "0:a:0",  # audio from audio file
+                "0:a:0",
             ]
         else:
-            # Audio-only stream
             map_flags = [
                 "-map",
                 "0:a:0",
@@ -123,8 +136,7 @@ class StreamManager:
             ]
         )
 
-        logger.info(f"Starting stream to {platform}")
-        logger.debug(f"ffmpeg command: {' '.join(cmd)}")
+        logger.info("Starting stream to %s", platform)
 
         self._process = subprocess.Popen(
             cmd,
@@ -132,6 +144,17 @@ class StreamManager:
             stderr=subprocess.PIPE,
             text=True,
         )
+
+        def _log_ffmpeg_stderr(proc: subprocess.Popen) -> None:
+            for line in proc.stderr or []:
+                line = line.strip()
+                if line:
+                    logger.error("[ffmpeg] %s", line)
+
+        thread = threading.Thread(
+            target=_log_ffmpeg_stderr, args=(self._process,), daemon=True
+        )
+        thread.start()
 
     def stop(self) -> None:
         """Stop the running stream."""
@@ -160,6 +183,7 @@ class StreamManager:
 
 # Module-level singleton manages the stream process
 _manager = StreamManager()
+atexit.register(_manager.stop)
 
 
 @click.group(help="Live stream generated mixes to YouTube, Twitch, or Facebook.")
@@ -184,8 +208,12 @@ def stream() -> None:
 @click.option(
     "--stream-key",
     required=True,
-    envvar="YOUTUBE_STREAM_KEY",
-    help="Stream key / ingest token. Can also set YOUTUBE_STREAM_KEY env var.",
+    envvar="STREAM_KEY",
+    help=(
+        "Stream key / ingest token for the streaming platform. "
+        "Can also set STREAM_KEY or YOUTUBE_STREAM_KEY env var. "
+        "WARNING: Stream key is visible in process listings (ps aux)."
+    ),
 )
 @click.option(
     "--cover",
@@ -196,6 +224,9 @@ def start(
     audio: str, platform: str, stream_key: str, cover: Optional[str]
 ) -> None:
     """Start live streaming an audio file to a platform."""
+    # Fallback: check legacy YOUTUBE_STREAM_KEY env var
+    if not stream_key:
+        stream_key = os.environ.get("YOUTUBE_STREAM_KEY", "")
     try:
         _manager.start(
             audio_path=audio,

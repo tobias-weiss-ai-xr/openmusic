@@ -55,7 +55,7 @@ class TestDetectTempo:
         assert abs(detected - expected_bpm) < 5.0
 
     def test_short_audio_returns_none(self):
-        audio = np.random.randn(8000)
+        audio = np.random.randn(7999)
         result = detect_tempo(audio, 8000)
         assert result is None
 
@@ -67,6 +67,11 @@ class TestDetectTempo:
     def test_beat_methods_list_not_empty(self):
         assert len(BEAT_TRACKING_METHODS) > 0
         assert "default" in BEAT_TRACKING_METHODS
+
+    def test_3d_audio_raises_value_error(self):
+        audio = np.random.randn(48000, 2, 2)
+        with pytest.raises(ValueError, match="Expected 1D or 2D"):
+            detect_tempo(audio, 48000)
 
 
 class TestDetectBeats:
@@ -90,6 +95,11 @@ class TestDetectBeats:
     def test_empty_for_silence(self):
         audio = np.zeros(48000 * 3)
         beats = detect_beats(audio, 48000)
+        assert beats == []
+
+    def test_short_audio_returns_empty_list(self):
+        audio = np.random.randn(7999)
+        beats = detect_beats(audio, 8000)
         assert beats == []
 
 

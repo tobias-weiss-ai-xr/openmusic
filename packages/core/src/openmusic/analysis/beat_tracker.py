@@ -19,7 +19,7 @@ def _to_mono(audio: np.ndarray) -> np.ndarray:
         return audio
     if audio.ndim == 2:
         return np.mean(audio, axis=1)
-    return audio
+    raise ValueError(f"Expected 1D or 2D audio array, got {audio.ndim}D")
 
 
 def detect_tempo(
@@ -88,6 +88,10 @@ def detect_beats(
         raise ValueError(f"Unknown method: {method}. Must be one of {BEAT_TRACKING_METHODS}")
 
     audio = _to_mono(audio)
+    duration = len(audio) / sample_rate
+
+    if duration < MIN_AUDIO_SECONDS:
+        return []
 
     if np.all(np.abs(audio) < 1e-10):
         return []

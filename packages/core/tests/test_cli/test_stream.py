@@ -2,10 +2,17 @@
 
 from click.testing import CliRunner
 
+from openmusic.cli.main import main
 from openmusic.cli.stream import stream
 
 
 class TestStreamCommandGroup:
+    def test_stream_group_registered(self):
+        runner = CliRunner()
+        result = runner.invoke(main, ["stream", "--help"])
+        assert result.exit_code == 0
+        assert "Live stream" in result.output or "stream" in result.output
+
     def test_start_requires_audio(self):
         runner = CliRunner()
         result = runner.invoke(stream, ["start"])

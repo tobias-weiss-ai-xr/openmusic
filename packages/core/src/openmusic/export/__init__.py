@@ -20,6 +20,11 @@ from openmusic.export.youtube_uploader import (
     YouTubeUpNotInstalledError,
 )
 from openmusic.export.cover_generator import CoverGenerator, MixCoverConfig
+from openmusic.export.loudness import (
+    LUFS_TARGET,
+    measure_integrated_loudness,
+    normalize_loudness,
+)
 
 __all__ = [
     "AudioEncoder",
@@ -40,4 +45,7 @@ __all__ = [
     "YouTubeUpNotInstalledError",
     "CoverGenerator",
     "MixCoverConfig",
+    "LUFS_TARGET",
+    "measure_integrated_loudness",
+    "normalize_loudness",
 ]

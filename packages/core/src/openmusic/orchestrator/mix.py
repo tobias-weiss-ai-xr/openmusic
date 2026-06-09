@@ -488,9 +488,9 @@ class MixOrchestrator:
             return self._generate_segment_from_pattern(index, total)
 
         stage_id = _get_stage_for_segment(index, total)
-        prompt = self._get_segment_prompt(index, total, stage_id=stage_id)
         seg_bpm = self.config.bpm_for_segment(index)
         seg_key = self.config.key_for_segment(index)
+        prompt = self._get_segment_prompt(index, total, stage_id=stage_id, seg_key=seg_key, seg_bpm=seg_bpm)
         return self.generator.generate_texture(
             prompt=prompt,
             duration=int(self.config.segment_duration),
@@ -504,9 +504,9 @@ class MixOrchestrator:
 
         if not candidates or not self._pattern_selector:
             stage_id = _get_stage_for_segment(index, total)
-            prompt = self._get_segment_prompt(index, total, stage_id=stage_id)
             seg_bpm = self.config.bpm_for_segment(index)
             seg_key = self.config.key_for_segment(index)
+            prompt = self._get_segment_prompt(index, total, stage_id=stage_id, seg_key=seg_key, seg_bpm=seg_bpm)
             return self.generator.generate_texture(
                 prompt=prompt,
                 duration=int(self.config.segment_duration),
@@ -519,9 +519,9 @@ class MixOrchestrator:
             return Path(selected.path)
 
         stage_id = _get_stage_for_segment(index, total)
-        prompt = self._get_segment_prompt(index, total, stage_id=stage_id)
         seg_bpm = self.config.bpm_for_segment(index)
         seg_key = self.config.key_for_segment(index)
+        prompt = self._get_segment_prompt(index, total, stage_id=stage_id, seg_key=seg_key, seg_bpm=seg_bpm)
         return self.generator.generate_texture(
             prompt=prompt,
             duration=int(self.config.segment_duration),
@@ -735,16 +735,22 @@ class MixOrchestrator:
         index: int,
         total: int,
         stage_id: Optional[str] = None,
+        seg_key: Optional[str] = None,
+        seg_bpm: Optional[int] = None,
     ) -> str:
         if stage_id is None:
             stage_id = _get_stage_for_segment(index, total)
+        if seg_key is None:
+            seg_key = self.config.key
+        if seg_bpm is None:
+            seg_bpm = self.config.bpm
 
         stage_prompts = STAGE_PROMPTS.get(stage_id, STAGE_PROMPTS["decay-one"])
         prompt_base = random.choice(stage_prompts)
 
         return (
-            f"dub techno, {prompt_base} in {self.config.key}, "
-            f"{self.config.bpm} BPM"
+            f"dub techno, {prompt_base} in {seg_key}, "
+            f"{seg_bpm} BPM"
         )
 
     def _generate_cover_art(self, output_path: Path) -> Path:

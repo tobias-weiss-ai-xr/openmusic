@@ -81,13 +81,14 @@ export class MultiTapDelayEffect {
   private applyConfig(): void {
     const c = this.config;
 
+    const mixRatio = c.wetDryMix / 100;
+
     for (let i = 0; i < c.taps.length; i++) {
       this.feedbacks[i].gain.value = c.taps[i].feedback * c.masterFeedback;
-      this.tapGains[i].gain.value = c.enabled ? c.taps[i].gain : 0;
+      this.tapGains[i].gain.value = c.enabled ? c.taps[i].gain * mixRatio : 0;
     }
 
-    const mixRatio = c.wetDryMix / 100;
-    this.wetMerge.gain.value = c.enabled ? mixRatio : 1;
+    this.wetMerge.gain.value = 1; // summing bus — always pass through
     this.dry.gain.value = c.enabled ? 1 - mixRatio : 1;
   }
 

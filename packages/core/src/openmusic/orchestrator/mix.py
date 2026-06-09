@@ -47,6 +47,8 @@ __all__ = [
     "MixOrchestrator",
     "STAGE_BOUNDARIES",
     "STAGE_PROMPTS",
+    "STYLE_MODIFIERS",
+    "STRUCTURE_CUES",
     "_get_stage_for_segment",
     "_compute_stage_timings",
 ]
@@ -104,6 +106,30 @@ STAGE_BOUNDARIES = [
     (1.30, "dissolution"),
 ]
 
+
+STYLE_MODIFIERS = [
+    "atmospheric",
+    "percussive",
+    "drone",
+    "minimal",
+    "spacious",
+    "filtered",
+    "hypnotic",
+    "rolling",
+]
+
+STRUCTURE_CUES = {
+    "ambient-intro": ["slow evolving pads", "spacious soundscape", "textural drone"],
+    "early-build": ["building tension", "layered percussion", "rhythmic foundation"],
+    "mid-build": ["driving rhythms", "dense percussion", "full spectrum"],
+    "pre-peak-one": ["rising intensity", "crushing bass", "maximal presence"],
+    "peak-one": ["peak energy", "all elements firing", "powerful low-end"],
+    "post-peak": ["sustaining intensity", "peak saturation", "controlled explosion"],
+    "peak-two": ["renewed energy surge", "layered textures", "high-impact rhythm"],
+    "decay-one": ["receding elements", "looming bass", "wide space"],
+    "decay-two": ["scattered fragments", "bare rhythm", "hollow space"],
+    "dissolution": ["fading textures", "sparse echoes", "dissolving drone"],
+}
 
 STAGE_PROMPTS = {
     "ambient-intro": [
@@ -745,11 +771,13 @@ class MixOrchestrator:
         if seg_bpm is None:
             seg_bpm = self.config.bpm
 
-        stage_prompts = STAGE_PROMPTS.get(stage_id, STAGE_PROMPTS["decay-one"])
-        prompt_base = random.choice(stage_prompts)
+        # Combinatorial prompt: structure cue + style modifier
+        cues = STRUCTURE_CUES.get(stage_id, ["textural drone"])
+        cue = random.choice(cues)
+        modifier = random.choice(STYLE_MODIFIERS)
 
         return (
-            f"dub techno, {prompt_base} in {seg_key}, "
+            f"dub techno, {cue}, {modifier}, in {seg_key}, "
             f"{seg_bpm} BPM"
         )
 

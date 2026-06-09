@@ -117,6 +117,24 @@ class TestMixOrchestratorSegmentPrompts:
         assert "outro" in prompt.lower()
 
 
+class TestPromptStyleModifiers:
+    def test_prompt_contains_style_modifier(self):
+        config = MixConfig(key="Dm", bpm=125)
+        orch = MixOrchestrator(config)
+        prompts = [orch._get_segment_prompt(i, 40) for i in range(40)]
+        style_keywords = {"atmospheric", "percussive", "drone", "minimal", "spacious", "filtered"}
+        found = any(kw in p for p in prompts for kw in style_keywords)
+        assert found, f"No style modifiers found: {prompts[:3]}"
+
+    def test_prompt_differs_between_adjacent_segments(self):
+        config = MixConfig(key="Dm", bpm=125)
+        orch = MixOrchestrator(config)
+        p1 = orch._get_segment_prompt(0, 40)
+        p2 = orch._get_segment_prompt(1, 40)
+        assert p1.startswith("dub techno,")
+        assert p2.startswith("dub techno,")
+
+
 class TestMixOrchestratorGenerateSegment:
     @patch("openmusic.orchestrator.mix.ACEStepGenerator")
     def test_generate_segment_calls_acestep(self, MockGenerator):

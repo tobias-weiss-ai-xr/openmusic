@@ -95,6 +95,7 @@ class ACEStepGenerator:
         duration: int = 60,
         bpm: int = 125,
         key: str = "Am",
+        inference_steps: int | None = None,
     ) -> Path:
         params_dict = {
             "bpm": bpm,
@@ -102,6 +103,8 @@ class ACEStepGenerator:
             "duration": duration,
             "instrumental": True,
         }
+        if inference_steps is not None:
+            params_dict["inference_steps"] = inference_steps
         prompt_hash = self.cache.compute_hash(prompt, params_dict)
 
         cached = self.cache.get_cached(prompt_hash)
@@ -165,7 +168,7 @@ class ACEStepGenerator:
             bpm=params_dict.get("bpm"),
             duration=params_dict.get("duration", 30),
             instrumental=params_dict.get("instrumental", True),
-            inference_steps=self.config.inference_steps,
+            inference_steps=params_dict.get("inference_steps", self.config.inference_steps),
             keyscale=params_dict.get("key", ""),
         )
 

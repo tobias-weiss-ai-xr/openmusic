@@ -434,6 +434,16 @@ class MixConfig:
     use_bayesian_markov: bool = False
     pattern_style: str = "dub_techno"
     pattern_library_path: str = ""
+    inference_steps_range: tuple[int, int] | None = None  # e.g., (8, 50)
+
+    def _inference_steps_for_segment(self, index: int, total: int) -> int | None:
+        if self.inference_steps_range is None:
+            return None
+        lo, hi = self.inference_steps_range
+        if total <= 1:
+            return (lo + hi) // 2
+        fraction = index / (total - 1)
+        return int(lo + fraction * (hi - lo))
 
     def bpm_for_segment(self, index: int) -> int:
         sched = _parse_schedule(self.bpm_schedule, self.bpm)
@@ -544,11 +554,13 @@ class MixOrchestrator:
         seg_bpm = self.config.bpm_for_segment(index)
         seg_key = self.config.key_for_segment(index)
         prompt = self._get_segment_prompt(index, total, stage_id=stage_id, seg_key=seg_key, seg_bpm=seg_bpm)
+        inference_steps = self.config._inference_steps_for_segment(index, total)
         return self.generator.generate_texture(
             prompt=prompt,
             duration=int(self.config.segment_duration),
             bpm=seg_bpm,
             key=seg_key,
+            inference_steps=inference_steps,
         )
 
     def _generate_segment_from_pattern(self, index: int, total: int) -> Path:
@@ -560,11 +572,13 @@ class MixOrchestrator:
             seg_bpm = self.config.bpm_for_segment(index)
             seg_key = self.config.key_for_segment(index)
             prompt = self._get_segment_prompt(index, total, stage_id=stage_id, seg_key=seg_key, seg_bpm=seg_bpm)
+            inference_steps = self.config._inference_steps_for_segment(index, total)
             return self.generator.generate_texture(
                 prompt=prompt,
                 duration=int(self.config.segment_duration),
                 bpm=seg_bpm,
                 key=seg_key,
+                inference_steps=inference_steps,
             )
 
         selected = self._pattern_selector.select(candidates)
@@ -575,11 +589,13 @@ class MixOrchestrator:
         seg_bpm = self.config.bpm_for_segment(index)
         seg_key = self.config.key_for_segment(index)
         prompt = self._get_segment_prompt(index, total, stage_id=stage_id, seg_key=seg_key, seg_bpm=seg_bpm)
+        inference_steps = self.config._inference_steps_for_segment(index, total)
         return self.generator.generate_texture(
             prompt=prompt,
             duration=int(self.config.segment_duration),
             bpm=seg_bpm,
             key=seg_key,
+            inference_steps=inference_steps,
         )
 
     def _get_effects_config(self, preset_name: str | None = None) -> dict:

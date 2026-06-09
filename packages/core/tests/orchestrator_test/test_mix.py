@@ -462,7 +462,7 @@ class TestMixOrchestratorAssembly:
         # Set up mocks to create actual files
         counter = [0]
 
-        def mock_generate_texture(prompt, duration, bpm, key):
+        def mock_generate_texture(prompt, duration, bpm, key, inference_steps=None):
             counter[0] += 1
             return self._make_test_wav(tmp_path / f"raw_{counter[0]}.wav")
 
@@ -532,3 +532,32 @@ class TestEffectsDiversity:
         orch = MixOrchestrator(config)
         effects = orch._get_effects_config()
         assert "delay" in effects
+
+
+class TestInferenceSteps:
+
+    def test_inference_steps_range_linear_mapping(self):
+        config = MixConfig(
+            key="Dm", bpm=125, length=3600, segment_duration=180,
+            inference_steps_range=(8, 50),
+        )
+        steps_0 = config._inference_steps_for_segment(0, 20)
+        steps_19 = config._inference_steps_for_segment(19, 20)
+        assert steps_0 == pytest.approx(8, abs=1)
+        assert steps_19 == pytest.approx(50, abs=1)
+        steps_mid = config._inference_steps_for_segment(10, 20)
+        assert steps_mid > 20
+        assert steps_mid < 38
+
+    def test_inference_steps_none_when_range_unset(self):
+        config = MixConfig(key="Dm", bpm=125)
+        result = config._inference_steps_for_segment(0, 10)
+        assert result is None
+
+    def test_inference_steps_single_segment(self):
+        config = MixConfig(
+            key="Dm", bpm=125, length=10, segment_duration=10,
+            inference_steps_range=(8, 50),
+        )
+        result = config._inference_steps_for_segment(0, 1)
+        assert result == 29

@@ -47,8 +47,8 @@ __all__ = [
     "MixOrchestrator",
     "STAGE_BOUNDARIES",
     "STAGE_PROMPTS",
-    "STYLE_MODIFIERS",
-    "STRUCTURE_CUES",
+    "STAGE_PRESETS",
+    "STAGE_VARIATION",
     "_get_stage_for_segment",
     "_compute_stage_timings",
 ]
@@ -172,6 +172,33 @@ STAGE_PROMPTS = {
         "textural fadeout, echo chamber decay, final breath, "
         "ambient dissolution, minimal signal, fading into silence",
     ],
+}
+
+
+STAGE_PRESETS = {
+    "ambient-intro": "minimal_dub",
+    "early-build": "deep_dub",
+    "mid-build": "deep_dub",
+    "pre-peak-one": "deep_dub",
+    "peak-one": "deep_dub",
+    "post-peak": "club_dub",
+    "peak-two": "club_dub",
+    "decay-one": "deep_dub",
+    "decay-two": "minimal_dub",
+    "dissolution": "minimal_dub",
+}
+
+STAGE_VARIATION = {
+    "ambient-intro": 0.1,
+    "early-build": 0.2,
+    "mid-build": 0.4,
+    "pre-peak-one": 0.5,
+    "peak-one": 0.6,
+    "post-peak": 0.5,
+    "peak-two": 0.4,
+    "decay-one": 0.3,
+    "decay-two": 0.2,
+    "dissolution": 0.1,
 }
 
 
@@ -555,14 +582,14 @@ class MixOrchestrator:
             key=seg_key,
         )
 
-    def _get_effects_config(self) -> dict:
-        preset_name = self.config.effects_preset
-        if preset_name not in _EFFECTS_PRESETS:
+    def _get_effects_config(self, preset_name: str | None = None) -> dict:
+        name = preset_name or self.config.effects_preset
+        if name not in _EFFECTS_PRESETS:
             raise ValueError(
-                f"Unknown effects preset '{preset_name}'. "
+                f"Unknown effects preset '{name}'. "
                 f"Available: {sorted(_EFFECTS_PRESETS)}"
             )
-        return _EFFECTS_PRESETS[preset_name]
+        return _EFFECTS_PRESETS[name]
 
     def _process_segment(self, segment_path: Path, index: int, total: int) -> Path:
         if self._bridge is None:
@@ -600,16 +627,20 @@ class MixOrchestrator:
             return persistent_path
 
         # Fallback: TypeScript bridge (existing logic)
-        base_effects = self._get_effects_config()
         seg_bpm = self.config.bpm_for_segment(index)
         seg_key = self.config.key_for_segment(index)
         stage_id = _get_stage_for_segment(index, total)
+        # Stage-specific preset for sonic diversity
+        preset_name = STAGE_PRESETS.get(stage_id, self.config.effects_preset)
+        base_effects = self._get_effects_config(preset_name=preset_name)
         if self.config.effects_modifiers:
             modifiers = _parse_effects_modifiers(self.config.effects_modifiers)
             segment_pos = index / max(total - 1, 1)
             effects = interpolate_effects(base_effects, modifiers, stage_id, segment_pos)
         else:
             effects = base_effects
+
+        variation = STAGE_VARIATION.get(stage_id, 0.3)
 
         config = {
             "sampleRate": 48000,
@@ -620,7 +651,7 @@ class MixOrchestrator:
             "effects": effects,
             "pattern": {
                 "style": "dub_techno",
-                "variation": 0.3,
+                "variation": variation,
             },
         }
 

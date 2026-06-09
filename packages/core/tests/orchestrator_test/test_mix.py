@@ -322,19 +322,22 @@ class TestMixOrchestratorProcessSegment:
 
         call_args = mock_bridge.call_audio_engine.call_args
         effects = call_args[1]["config"]["effects"]
-        assert effects["delay"]["primaryTime"] == 0.3
-        assert effects["filter"]["frequency"] == 1000
+        # Index 0 -> "ambient-intro" stage -> STAGE_PRESETS overrides to "minimal_dub"
+        assert effects["delay"]["primaryTime"] == 0.375
+        assert effects["filter"]["frequency"] == 900
 
     @patch("openmusic.orchestrator.mix.TypeScriptBridge")
     @patch("openmusic.orchestrator.mix.ACEStepGenerator")
     def test_process_segment_rejects_unknown_preset(self, MockGenerator, MockBridge):
-        config = MixConfig(effects_preset="nonexistent", effects_backend="typescript")
+        config = MixConfig(effects_preset="deep_dub", effects_backend="typescript")
         mock_bridge = MockBridge.return_value
         delattr(mock_bridge, "process")
         orch = MixOrchestrator(config)
 
+        # STAGE_PRESETS overrides per-stage, so _process_segment never hits
+        # an unknown preset. Test _get_effects_config directly instead.
         with pytest.raises(ValueError, match="Unknown effects preset"):
-            orch._process_segment(Path("/tmp/segment_0.wav"), index=0, total=5)
+            orch._get_effects_config(preset_name="nonexistent")
 
 
 class TestMixOrchestratorAssembly:
@@ -480,3 +483,52 @@ class TestMixOrchestratorAssembly:
         # 2 segments of 50ms (2400 samples each) minus crossfade (800 = 1/3 of 2400)
         expected_samples = 2400 + 2400 - 800
         assert audio.shape[0] == expected_samples
+
+
+class TestEffectsDiversity:
+
+    def test_preset_changes_by_stage(self):
+        from openmusic.orchestrator.mix import STAGE_PRESETS
+
+        for stage_name in STAGE_PRESETS:
+            preset_name = STAGE_PRESETS[stage_name]
+            config = MixConfig(key="Dm", bpm=125, effects_preset=preset_name)
+            orch = MixOrchestrator(config)
+            effects = orch._get_effects_config()
+            assert "delay" in effects
+            assert "reverb" in effects
+
+    def test_pattern_variation_varies_by_stage(self):
+        from openmusic.orchestrator.mix import STAGE_VARIATION, STAGE_BOUNDARIES
+
+        stage_names = [stage for _, stage in STAGE_BOUNDARIES]
+        variations = [STAGE_VARIATION.get(s, 0.3) for s in stage_names]
+        assert len(set(variations)) > 1, f"All variations are the same: {variations}"
+
+    def test_stage_presets_cover_all_stages(self):
+        from openmusic.orchestrator.mix import STAGE_PRESETS, STAGE_BOUNDARIES
+
+        for _, stage in STAGE_BOUNDARIES:
+            assert stage in STAGE_PRESETS, f"Stage {stage} missing from STAGE_PRESETS"
+
+    def test_stage_variation_cover_all_stages(self):
+        from openmusic.orchestrator.mix import STAGE_VARIATION, STAGE_BOUNDARIES
+
+        for _, stage in STAGE_BOUNDARIES:
+            assert stage in STAGE_VARIATION, f"Stage {stage} missing from STAGE_VARIATION"
+
+    def test_get_effects_config_with_preset_name(self):
+        config = MixConfig(key="Dm", bpm=125)
+        orch = MixOrchestrator(config)
+
+        deep_dub = orch._get_effects_config(preset_name="deep_dub")
+        assert deep_dub["delay"]["primaryMix"] > 0.5
+
+        minimal = orch._get_effects_config(preset_name="minimal_dub")
+        assert minimal["delay"]["primaryMix"] < 0.5
+
+    def test_get_effects_config_default_fallback(self):
+        config = MixConfig(key="Dm", bpm=125, effects_preset="club_dub")
+        orch = MixOrchestrator(config)
+        effects = orch._get_effects_config()
+        assert "delay" in effects

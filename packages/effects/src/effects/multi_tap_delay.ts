@@ -87,7 +87,7 @@ export class MultiTapDelayEffect {
     }
 
     const mixRatio = c.wetDryMix / 100;
-    this.wetMerge.gain.value = c.enabled ? mixRatio : 0;
+    this.wetMerge.gain.value = c.enabled ? mixRatio : 1;
     this.dry.gain.value = c.enabled ? 1 - mixRatio : 1;
   }
 

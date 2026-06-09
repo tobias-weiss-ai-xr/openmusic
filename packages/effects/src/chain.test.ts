@@ -67,6 +67,43 @@ describe('DubTechnoEffectsChain', () => {
     }
   }, 15000);
 
+  test('setParam works for tapeSaturation', async () => {
+    const ctx = makeContext();
+    const chain = new DubTechnoEffectsChain(DEFAULT_EFFECTS_CONFIG);
+    const input = makeBuffer(ctx);
+
+    chain.setParam('tapeSaturation', 'drive', 40);
+    chain.setParam('tapeSaturation', 'wetDryMix', 50);
+
+    const output = await chain.process(input);
+    expect(output).toBeInstanceOf(AudioBuffer);
+  });
+
+  test('setParam works for multiTapDelay', async () => {
+    const ctx = makeContext();
+    const chain = new DubTechnoEffectsChain(DEFAULT_EFFECTS_CONFIG);
+    const input = makeBuffer(ctx);
+
+    chain.setParam('multiTapDelay', 'time_0', 0.5);
+    chain.setParam('multiTapDelay', 'gain_0', 0.6);
+
+    const output = await chain.process(input);
+    expect(output).toBeInstanceOf(AudioBuffer);
+  });
+
+  test('setParam works for granularDelay', async () => {
+    const ctx = makeContext();
+    const chain = new DubTechnoEffectsChain(DEFAULT_EFFECTS_CONFIG);
+    const input = makeBuffer(ctx);
+
+    chain.setParam('granularDelay', 'grainSizeMs', 80);
+    chain.setParam('granularDelay', 'feedback', 50);
+    chain.setParam('granularDelay', 'wetDryMix', 50);
+
+    const output = await chain.process(input);
+    expect(output).toBeInstanceOf(AudioBuffer);
+  });
+
   test('all effects disabled passes signal through', async () => {
     const ctx = makeContext();
     const config = {
@@ -75,6 +112,9 @@ describe('DubTechnoEffectsChain', () => {
       filter: { ...DEFAULT_EFFECTS_CONFIG.filter, enabled: false },
       distortion: { ...DEFAULT_EFFECTS_CONFIG.distortion, enabled: false },
       vinyl: { ...DEFAULT_EFFECTS_CONFIG.vinyl, enabled: false },
+      tapeSaturation: { ...DEFAULT_EFFECTS_CONFIG.tapeSaturation, enabled: false },
+      multiTapDelay: { ...DEFAULT_EFFECTS_CONFIG.multiTapDelay, enabled: false },
+      granularDelay: { ...DEFAULT_EFFECTS_CONFIG.granularDelay, enabled: false },
     };
     const chain = new DubTechnoEffectsChain(config);
     const input = makeBuffer(ctx);

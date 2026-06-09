@@ -85,8 +85,13 @@ export class GranularDelayEffect {
     this.feedbackGain.gain.value = feedbackNorm * 0.5;
 
     const mixRatio = c.wetDryMix / 100;
-    this.wetGain.gain.value = c.enabled ? mixRatio : 0;
+    this.wetGain.gain.value = c.enabled ? mixRatio : 1;
     this.dryGain.gain.value = c.enabled ? 1 - mixRatio : 1;
+
+    const numGrains = this.grainGains.length;
+    for (let i = 0; i < numGrains; i++) {
+      this.grainGains[i].gain.value = c.enabled ? 1 / numGrains : 0;
+    }
   }
 
   setParam(param: string, value: number): void {

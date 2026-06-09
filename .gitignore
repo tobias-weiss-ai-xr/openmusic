@@ -22,3 +22,9 @@ youtube_token.json
 .secrets/
 cookies.txt
 *.aac
+*.bak
+cookies_*
+.playwright-mcp/
+cover_*.svg
+mix_cover_*
+youtube_current.jpeg

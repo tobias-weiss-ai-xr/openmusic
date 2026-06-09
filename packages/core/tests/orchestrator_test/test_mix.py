@@ -324,7 +324,9 @@ class TestMixOrchestratorProcessSegment:
         effects = call_args[1]["config"]["effects"]
         # Index 0 -> "ambient-intro" stage -> STAGE_PRESETS overrides to "minimal_dub"
         assert effects["delay"]["primaryTime"] == 0.375
-        assert effects["filter"]["frequency"] == 900
+        # MIDI modulation changes filter frequency from base 900
+        assert effects["filter"]["frequency"] != 900
+        assert 200 <= effects["filter"]["frequency"] <= 2000
 
     @patch("openmusic.orchestrator.mix.TypeScriptBridge")
     @patch("openmusic.orchestrator.mix.ACEStepGenerator")

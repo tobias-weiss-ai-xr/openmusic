@@ -1,3 +1,4 @@
+import copy
 import logging
 import math
 import random
@@ -605,7 +606,7 @@ class MixOrchestrator:
                 f"Unknown effects preset '{name}'. "
                 f"Available: {sorted(_EFFECTS_PRESETS)}"
             )
-        return _EFFECTS_PRESETS[name]
+        return copy.deepcopy(_EFFECTS_PRESETS[name])
 
     def _process_segment(self, segment_path: Path, index: int, total: int) -> Path:
         if self._bridge is None:
@@ -657,6 +658,25 @@ class MixOrchestrator:
             effects = base_effects
 
         variation = STAGE_VARIATION.get(stage_id, 0.3)
+
+        # Apply MIDI-driven effect modulation
+        from openmusic.orchestrator.midi_modulation import get_modulation_for_segment
+        mod = get_modulation_for_segment(index, total, bpm=seg_bpm)
+        if "delay" in effects:
+            effects["delay"]["primaryFeedback"] = float(
+                np.clip(
+                    effects["delay"].get("primaryFeedback", 0.5) * mod["delay_feedback_mod"] * 2,
+                    0.0, 1.0,
+                )
+            )
+            effects["delay"]["primaryMix"] = float(
+                np.clip(
+                    mod["reverb_mix_mod"],
+                    0.0, 1.0,
+                )
+            )
+        if "filter" in effects:
+            effects["filter"]["frequency"] = int(mod["filter_cutoff_mod"])
 
         config = {
             "sampleRate": 48000,

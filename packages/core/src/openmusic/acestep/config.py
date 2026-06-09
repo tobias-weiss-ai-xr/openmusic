@@ -5,11 +5,23 @@ from dataclasses import dataclass, field
 class ACEStepConfig:
     """Configuration for the ACE-Step AI model."""
 
-    model_path: str = "acestep-v15-turbo"
+    model_preset: str = "sft"
+    model_path: str = ""
     device: str = "auto"
     audio_format: str = "wav"
     max_duration: int = 600
-    inference_steps: int = 8
+    inference_steps: int = 0
+
+    def __post_init__(self):
+        if not self.model_path:
+            if self.model_preset == "turbo":
+                self.model_path = "acestep-v15-turbo"
+                if self.inference_steps == 0:
+                    self.inference_steps = 8
+            else:
+                self.model_path = "acestep-v15-sft"
+                if self.inference_steps == 0:
+                    self.inference_steps = 50
 
 
 @dataclass

@@ -171,7 +171,7 @@ class TestMixOrchestratorProcessSegment:
 
         mock_bridge.call_audio_engine.side_effect = mock_bridge_call
 
-        result = orch._process_segment(input_path)
+        result = orch._process_segment(input_path, index=0, total=5)
 
         mock_bridge.call_audio_engine.assert_called_once()
         assert isinstance(result, Path)
@@ -192,7 +192,7 @@ class TestMixOrchestratorProcessSegment:
         orch = MixOrchestrator(config)
 
         with pytest.raises(BridgeError, match="Effects processing failed"):
-            orch._process_segment(Path("/tmp/segment_0.wav"))
+            orch._process_segment(Path("/tmp/segment_0.wav"), index=0, total=5)
 
     @patch("openmusic.orchestrator.mix.TypeScriptBridge")
     @patch("openmusic.orchestrator.mix.ACEStepGenerator")
@@ -215,7 +215,7 @@ class TestMixOrchestratorProcessSegment:
 
         mock_bridge.call_audio_engine.side_effect = mock_bridge_call
 
-        orch._process_segment(Path("/tmp/segment_0.wav"))
+        orch._process_segment(Path("/tmp/segment_0.wav"), index=0, total=5)
 
         call_args = mock_bridge.call_audio_engine.call_args
         passed_config = call_args[1]["config"]
@@ -247,7 +247,7 @@ class TestMixOrchestratorProcessSegment:
 
         mock_bridge.call_audio_engine.side_effect = mock_bridge_call
 
-        orch._process_segment(Path("/tmp/segment_0.wav"))
+        orch._process_segment(Path("/tmp/segment_0.wav"), index=0, total=5)
 
         call_args = mock_bridge.call_audio_engine.call_args
         effects = call_args[1]["config"]["effects"]
@@ -300,7 +300,7 @@ class TestMixOrchestratorProcessSegment:
 
         mock_bridge.call_audio_engine.side_effect = mock_bridge_call
 
-        orch._process_segment(Path("/tmp/segment_0.wav"))
+        orch._process_segment(Path("/tmp/segment_0.wav"), index=0, total=5)
 
         call_args = mock_bridge.call_audio_engine.call_args
         effects = call_args[1]["config"]["effects"]
@@ -316,7 +316,7 @@ class TestMixOrchestratorProcessSegment:
         orch = MixOrchestrator(config)
 
         with pytest.raises(ValueError, match="Unknown effects preset"):
-            orch._process_segment(Path("/tmp/segment_0.wav"))
+            orch._process_segment(Path("/tmp/segment_0.wav"), index=0, total=5)
 
 
 class TestMixOrchestratorAssembly:
@@ -345,8 +345,8 @@ class TestMixOrchestratorAssembly:
 
         # Verify the output file has reasonable duration
         audio, sr = sf.read(str(output_path))
-        # Two 100ms segments (4800 each) minus crossfade (1200 = 1/4 of 4800)
-        expected_samples = 4800 + 4800 - 1200
+        # Two 100ms segments (4800 each) minus crossfade (1600 = 1/3 of 4800)
+        expected_samples = 4800 + 4800 - 1600
         assert audio.shape[0] == expected_samples
 
     def test_assemble_segments_with_single_segment(self, tmp_path: Path) -> None:
@@ -415,7 +415,7 @@ class TestMixOrchestratorAssembly:
 
         mock_bridge.call_audio_engine.side_effect = write_to_temp
 
-        result = orch._process_segment(input_path)
+        result = orch._process_segment(input_path, index=0, total=5)
 
         # The returned path should point to a file that exists
         assert result.exists()
@@ -459,6 +459,6 @@ class TestMixOrchestratorAssembly:
 
         # Verify the file has reasonable duration (should be ~2 segments)
         audio, sr = sf.read(str(result_path))
-        # 2 segments of 50ms (2400 samples each) minus crossfade (600 = 1/4 of 2400)
-        expected_samples = 2400 + 2400 - 600
-        assert audio.shape[0] >= expected_samples
+        # 2 segments of 50ms (2400 samples each) minus crossfade (800 = 1/3 of 2400)
+        expected_samples = 2400 + 2400 - 800
+        assert audio.shape[0] == expected_samples

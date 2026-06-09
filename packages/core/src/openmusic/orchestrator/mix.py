@@ -19,6 +19,29 @@ from openmusic.generators import AudioGenerator, StableAudioGenerator
 
 logger = logging.getLogger(__name__)
 
+
+def _pedalboard_available() -> bool:
+    """Check if pedalboard native extension loads without crashing.
+
+    Some prebuilt wheels (esp. for Python 3.14+) include AVX-512 instructions
+    that trigger SIGILL on CPUs without AVX-512. The OS-level signal can't
+    be caught with try/except ImportError, so we probe via a subprocess.
+    """
+    import subprocess
+    import sys
+
+    try:
+        result = subprocess.run(
+            [sys.executable, "-c", "from pedalboard import Pedalboard; print('ok')"],
+            capture_output=True,
+            text=True,
+            timeout=10,
+        )
+        return result.returncode == 0 and result.stdout.strip() == "ok"
+    except (subprocess.SubprocessError, OSError):
+        return False
+
+
 __all__ = [
     "MixConfig",
     "MixOrchestrator",
@@ -354,6 +377,7 @@ class MixConfig:
     bpm_schedule: Optional[str] = None
     key_schedule: Optional[str] = None
     model: str = "ace-step"
+    model_preset: str = "sft"
     use_bayesian_markov: bool = False
     pattern_style: str = "dub_techno"
     pattern_library_path: str = ""
@@ -374,7 +398,7 @@ class MixOrchestrator:
 
     def __init__(self, config: MixConfig):
         self.config = config
-        self.generator = self._create_generator(config.model)
+        self.generator = self._create_generator(config.model, config.model_preset)
         self.segment_count = math.ceil(config.length / config.segment_duration)
 
         # Select effects backend
@@ -382,6 +406,11 @@ class MixOrchestrator:
             self._bridge = None
         elif config.effects_backend == "pedalboard":
             try:
+                if not _pedalboard_available():
+                    raise ImportError(
+                        "pedalboard native extension not loadable "
+                        "(incompatible CPU or missing library)"
+                    )
                 from openmusic.bridge.pedalboard_bridge import PythonDSPBridge
 
                 self._bridge = PythonDSPBridge(
@@ -390,7 +419,7 @@ class MixOrchestrator:
                 )
             except ImportError:
                 logger.warning(
-                    "pedalboard not installed, falling back to TypeScript bridge"
+                    "pedalboard not available, falling back to TypeScript bridge"
                 )
                 self._bridge = TypeScriptBridge()
         else:
@@ -411,7 +440,7 @@ class MixOrchestrator:
         self.bridge = self._bridge if self._bridge is not None else TypeScriptBridge()
 
     @staticmethod
-    def _create_generator(model: str) -> AudioGenerator:
+    def _create_generator(model: str, model_preset: str = "sft") -> AudioGenerator:
         if model == "stable-audio-open":
             if not StableAudioGenerator.is_available():
                 logger.warning(
@@ -419,7 +448,9 @@ class MixOrchestrator:
                 )
                 return ACEStepGenerator()
             return StableAudioGenerator()
-        return ACEStepGenerator()
+        from openmusic.acestep.config import ACEStepConfig
+
+        return ACEStepGenerator(config=ACEStepConfig(model_preset=model_preset))
 
     def generate_mix(self) -> Path:
         segments: list[Path] = []
@@ -606,8 +637,8 @@ class MixOrchestrator:
         channels = 1 if first_audio.ndim == 1 else first_audio.shape[1]
         sample_rate = first_sr
 
-        # Crossfade duration: ~1 second at 48kHz, but ensure it's less than segment length
-        desired_crossfade = sample_rate  # 1 second
+        # Crossfade duration: ~3 seconds at 48kHz, but ensure it's less than segment length
+        desired_crossfade = sample_rate * 3  # 3 seconds
         # Calculate crossfade based on minimum segment length
         min_seg_len = len(first_audio)
         for seg_path in segments:
@@ -618,8 +649,8 @@ class MixOrchestrator:
                 )
             min_seg_len = min(min_seg_len, len(audio))
 
-        # Use 1/4 of minimum segment length for crossfade, max 1 second
-        crossfade_samples = min(desired_crossfade, min_seg_len // 4)
+        # Use 1/3 of minimum segment length for crossfade, max 3 seconds
+        crossfade_samples = min(desired_crossfade, min_seg_len // 3)
         if crossfade_samples < sample_rate // 100:  # At least 10ms
             crossfade_samples = sample_rate // 100
 
@@ -661,31 +692,31 @@ class MixOrchestrator:
                 combined[write_pos:end_pos] = audio[:end_pos]
                 write_pos = end_pos
             elif i == len(segments) - 1:
-                # Last segment: crossfade with previous, write remainder
-                # Crossfade region
+                # Last segment: equal-power crossfade with previous, write remainder
                 crossfade_start = write_pos - crossfade_samples
-                crossfade_end = write_pos
                 for j in range(crossfade_samples):
-                    alpha = j / crossfade_samples
-                    combined[crossfade_start + j] = (1 - alpha) * combined[
-                        crossfade_start + j
-                    ] + alpha * audio[j]
-                # Write remainder
+                    t = j / crossfade_samples
+                    fade_out = np.cos(t * np.pi / 2.0)
+                    fade_in = np.sin(t * np.pi / 2.0)
+                    combined[crossfade_start + j] = (
+                        fade_out * combined[crossfade_start + j]
+                        + fade_in * audio[j]
+                    )
                 remaining_len = seg_len - crossfade_samples
                 combined[write_pos : write_pos + remaining_len] = audio[
                     crossfade_samples:
                 ]
             else:
-                # Middle segments: crossfade with previous, write middle, reserve for next
-                # Crossfade with previous segment
+                # Middle segments: equal-power crossfade with previous, write middle, reserve for next
                 crossfade_start = write_pos - crossfade_samples
-                crossfade_end = write_pos
                 for j in range(crossfade_samples):
-                    alpha = j / crossfade_samples
-                    combined[crossfade_start + j] = (1 - alpha) * combined[
-                        crossfade_start + j
-                    ] + alpha * audio[j]
-                # Write main portion
+                    t = j / crossfade_samples
+                    fade_out = np.cos(t * np.pi / 2.0)
+                    fade_in = np.sin(t * np.pi / 2.0)
+                    combined[crossfade_start + j] = (
+                        fade_out * combined[crossfade_start + j]
+                        + fade_in * audio[j]
+                    )
                 main_len = seg_len - 2 * crossfade_samples
                 combined[write_pos : write_pos + main_len] = audio[
                     crossfade_samples : seg_len - crossfade_samples

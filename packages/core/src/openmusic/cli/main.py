@@ -56,10 +56,12 @@ def _build_config_from_flags(
     generate_cover: bool = False,
     cover_theme: str = "dark_industrial",
     model: str = "ace-step",
+    model_preset: str = "sft",
     use_bayesian_markov: bool = False,
 ) -> MixConfig:
     seconds = _parse_length_to_seconds(length)
     return MixConfig(
+        model_preset=model_preset,
         length=float(seconds),
         bpm=bpm,
         key=key,
@@ -127,6 +129,12 @@ def main():
     help="Audio generation model (default: ace-step)",
 )
 @click.option(
+    "--model-preset",
+    type=click.Choice(["sft", "turbo"]),
+    default="sft",
+    help="ACE-Step model preset (sft=50 steps, turbo=8 steps, lower VRAM)",
+)
+@click.option(
     "--use-bayesian-markov",
     is_flag=True,
     default=False,
@@ -144,6 +152,7 @@ def generate(
     cover_theme: str,
     cover_image: Optional[str],
     model: str,
+    model_preset: str,
     use_bayesian_markov: bool,
 ):
     """Generate a new mix using MixOrchestrator.
@@ -174,6 +183,7 @@ def generate(
             generate_cover=generate_cover_flag,
             cover_theme=cover_theme,
             model=model,
+            model_preset=model_preset,
         )
         # Use a progress reporter as a lightweight progress indicator
         total_segments = max(

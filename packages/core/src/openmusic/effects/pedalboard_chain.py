@@ -14,13 +14,11 @@ try:
         Delay,
         Chorus,
         Phaser,
-        Distortion,
         Compressor,
         Gain,
         HighShelfFilter,
         LowShelfFilter,
         PeakFilter,
-        HighpassFilter,
         LowpassFilter,
     )
 
@@ -97,7 +95,7 @@ class PedalboardEffectsChain:
         """Build a Pedalboard chain from preset parameters."""
         return Pedalboard(
             [
-                HighpassFilter(cutoff_frequency_hz=30.0),
+                # HPF removed — handled in PythonDSPBridge pre-processing
                 LowpassFilter(cutoff_frequency_hz=p["filter_cutoff_hz"]),
                 Delay(
                     delay_seconds=p["delay_seconds"],
@@ -111,7 +109,7 @@ class PedalboardEffectsChain:
                     dry_level=p["reverb_dry"],
                 ),
                 Chorus(rate_hz=p["chorus_rate_hz"], depth=p["chorus_depth"]),
-                Distortion(drive_db=p["distortion_drive"] * 20),
+                # Distortion removed — replaced by TapeSaturation in PythonDSPBridge
                 Gain(gain_db=p["output_gain_db"]),
             ]
         )

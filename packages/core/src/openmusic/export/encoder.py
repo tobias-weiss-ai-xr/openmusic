@@ -87,7 +87,9 @@ class AudioEncoder:
             "-c:a",
             "flac",
             "-sample_fmt",
-            "s32",
+            "s32",  # 24-bit encoding in s32 container
+            "-dither_method",
+            "triangular_hp",  # TPDF dithering to reduce quantization distortion
             "-ar",
             "48000",
         ]

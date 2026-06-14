@@ -26,11 +26,10 @@ class LFOModulationEngine(Effect):
         self.name = "lfo_modulation"
 
     def process(self, audio: np.ndarray, params: Dict[str, Any]) -> np.ndarray:
-        """Process audio with LFO modulation.
+        """Process audio with LFO amplitude modulation.
 
         Args:
-            audio: Input audio data (currently returned unchanged for compatibility).
-                   Shape must be same as input.
+            audio: Input audio data, mono (N,) or stereo (2, N).
             params: Dictionary containing:
                    - waveform: Waveform type ('sine', 'triangle', 'square', 'random')
                    - rate_hz: LFO frequency in Hz (0.1-20, default 1)
@@ -40,7 +39,7 @@ class LFOModulationEngine(Effect):
                    - sample_rate: Audio sample rate (default 48000)
 
         Returns:
-            Original audio unchanged (LFO would be used for internal parameter
+            Audio with LFO amplitude modulation applied.
         """
         # Extract parameters with defaults
         waveform = str(params.get("waveform", "sine"))
@@ -62,18 +61,27 @@ class LFOModulationEngine(Effect):
                 f"Must be one of: {sorted(valid_waveforms)}"
             )
 
+        # Determine shape: mono (N,) or stereo (N, 2)
+        if len(audio.shape) > 1 and audio.shape[1] == 2:
+            num_samples = audio.shape[0]
+            is_stereo = True
+        else:
+            num_samples = len(audio)
+            is_stereo = False
+
         # Generate modulation curve
         modulation_curve = self._generate_lfo_curve(
-            len(audio), waveform, rate_hz, phase_offset, sample_rate
+            num_samples, waveform, rate_hz, phase_offset, sample_rate
         )
 
-        # Apply depth scaling
-        modulation_curve = modulation_curve * (depth / 100.0)
+        # Apply gain modulation using the LFO curve
+        depth_decimal = depth / 100.0
+        gain_mod = 1.0 + modulation_curve * depth_decimal
 
-        # For this simple implementation, we return audio unchanged (pass-through)
-        # In a more advanced system, modulation_curve would be used to
-        # modulate effect parameters over time
-        return audio.copy()
+        if is_stereo:
+            return audio * gain_mod[:, np.newaxis]
+        else:
+            return audio * gain_mod
 
     def _generate_lfo_curve(
         self,

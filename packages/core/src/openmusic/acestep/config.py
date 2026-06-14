@@ -33,3 +33,4 @@ class GenerationParams:
     key: str | None = None
     duration: int = 30
     instrumental: bool = True
+    inference_steps: int | None = None

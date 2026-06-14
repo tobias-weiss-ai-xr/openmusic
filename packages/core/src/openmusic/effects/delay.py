@@ -53,6 +53,9 @@ class MultiTapDelay(Effect):
         master_feedback = float(params.get("master_feedback", 0.3))
         wet_dry = float(params.get("wet_dry", 50))
         sample_rate = int(params.get("sample_rate", 48000))
+        feedback_filter_enabled = bool(params.get("feedback_filter_enabled", False))
+        feedback_filter_freq = float(params.get("feedback_filter_freq", 450.0))
+        feedback_filter_q = float(params.get("feedback_filter_q", 2.0))
 
         # Ensure lists are correct length
         while len(tap_times_ms) < num_taps:
@@ -66,12 +69,12 @@ class MultiTapDelay(Effect):
         tap_times_samples = [int(t / 1000.0 * sample_rate) for t in tap_times_ms]
 
         # Determine audio format
-        is_stereo = len(audio.shape) > 1 and audio.shape[0] == 2
+        is_stereo = len(audio.shape) > 1 and audio.shape[1] == 2
 
         if is_stereo:
             output = np.zeros_like(audio)
-            left = audio[0].copy()
-            right = audio[1].copy()
+            left = audio[:, 0].copy()
+            right = audio[:, 1].copy()
         else:
             output = np.zeros_like(audio)
             left = audio.copy()
@@ -103,6 +106,32 @@ class MultiTapDelay(Effect):
                     for i in range(delay_samples, len(left)):
                         delayed[i] += delayed[i - delay_samples] * feedback
 
+                    # Apply bandpass filter to feedback signal (Basic Channel "filtered echo")
+                    if feedback_filter_enabled:
+                        w0 = 2 * np.pi * feedback_filter_freq / sample_rate
+                        alpha = np.sin(w0) / (2 * feedback_filter_q)
+                        b0 = alpha
+                        b1 = 0.0
+                        b2 = -alpha
+                        a0 = 1.0 + alpha
+                        a1 = -2.0 * np.cos(w0)
+                        a2 = 1.0 - alpha
+                        b0 /= a0
+                        b1 /= a0
+                        b2 /= a0
+                        a1 /= a0
+                        a2 /= a0
+                        filtered = np.zeros_like(delayed)
+                        for i in range(2, len(delayed)):
+                            filtered[i] = (
+                                b0 * delayed[i]
+                                + b1 * delayed[i - 1]
+                                + b2 * delayed[i - 2]
+                                - a1 * filtered[i - 1]
+                                - a2 * filtered[i - 2]
+                            )
+                        delayed = filtered
+
             # Apply pan
             pan_factor_left = np.sqrt(0.5 * (1 - pan))
             pan_factor_right = np.sqrt(0.5 * (1 + pan))
@@ -114,8 +143,8 @@ class MultiTapDelay(Effect):
         wet_ratio = wet_dry / 100.0
 
         if is_stereo:
-            output[0] = audio[0] * (1 - wet_ratio) + left * wet_ratio
-            output[1] = audio[1] * (1 - wet_ratio) + right * wet_ratio
+            output[:, 0] = audio[:, 0] * (1 - wet_ratio) + left * wet_ratio
+            output[:, 1] = audio[:, 1] * (1 - wet_ratio) + right * wet_ratio
         else:
             output = audio * (1 - wet_ratio) + left * wet_ratio
 

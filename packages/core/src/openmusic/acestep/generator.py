@@ -96,28 +96,40 @@ class ACEStepGenerator:
         bpm: int = 125,
         key: str = "Am",
         inference_steps: int | None = None,
+        params: GenerationParams | None = None,
+        seed: int | None = None,
     ) -> Path:
-        params_dict = {
-            "bpm": bpm,
-            "key": key,
-            "duration": duration,
-            "instrumental": True,
-        }
-        if inference_steps is not None:
-            params_dict["inference_steps"] = inference_steps
+        if params is not None:
+            params_dict = {
+                "bpm": params.bpm or bpm,
+                "key": params.key or key,
+                "duration": params.duration or duration,
+                "instrumental": params.instrumental,
+            }
+            if params.inference_steps is not None:
+                params_dict["inference_steps"] = params.inference_steps
+        else:
+            params_dict = {
+                "bpm": bpm,
+                "key": key,
+                "duration": duration,
+                "instrumental": True,
+            }
+            if inference_steps is not None:
+                params_dict["inference_steps"] = inference_steps
         prompt_hash = self.cache.compute_hash(prompt, params_dict)
 
         cached = self.cache.get_cached(prompt_hash)
         if cached is not None:
             return cached
 
-        return self._generate(prompt, params_dict, prompt_hash)
+        return self._generate(prompt, params_dict, prompt_hash, seed=seed)
 
     def generate_chord_stab(self, key: str = "Am", quality: str = "warm") -> Path:
         prompt = f"dub techno chord stabs in {key}, {quality} tone with heavy reverb and delay"
         return self.generate_texture(prompt=prompt, duration=8, bpm=125, key=key)
 
-    def _generate(self, prompt: str, params_dict: dict, prompt_hash: str) -> Path:
+    def _generate(self, prompt: str, params_dict: dict, prompt_hash: str, seed: int | None = None) -> Path:
         if not self.is_available():
             raise ACEStepNotAvailableError(
                 "ACE-Step is not installed. Install it from https://github.com/ace-step/ACE-Step-1.5"
@@ -171,6 +183,12 @@ class ACEStepGenerator:
             inference_steps=params_dict.get("inference_steps", self.config.inference_steps),
             keyscale=params_dict.get("key", ""),
         )
+        # Add seed if provided (ACE-Step may or may not support it)
+        if seed is not None:
+            try:
+                ace_params.seed = seed
+            except (AttributeError, TypeError):
+                logger.warning(f"ACE-Step does not support seed parameter, ignoring seed={seed}")
 
         ace_config = GenerationConfig(
             batch_size=1,

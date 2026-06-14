@@ -63,12 +63,12 @@ class SidechainCompression(Effect):
         wet_dry_mix = np.clip(wet_dry_mix, 0, 100)
 
         # Determine audio format
-        is_stereo = len(audio.shape) > 1 and audio.shape[0] == 2
+        is_stereo = len(audio.shape) > 1 and audio.shape[1] == 2
 
         if is_stereo:
             # Process each channel independently
             left_output = self._process_mono(
-                audio[0],
+                audio[:, 0],
                 threshold_db,
                 ratio,
                 attack_ms,
@@ -78,7 +78,7 @@ class SidechainCompression(Effect):
                 sample_rate,
             )
             right_output = self._process_mono(
-                audio[1],
+                audio[:, 1],
                 threshold_db,
                 ratio,
                 attack_ms,
@@ -87,7 +87,7 @@ class SidechainCompression(Effect):
                 wet_dry_mix,
                 sample_rate,
             )
-            return np.stack([left_output, right_output])
+            return np.column_stack([left_output, right_output])
         else:
             return self._process_mono(
                 audio,

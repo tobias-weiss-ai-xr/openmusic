@@ -3,20 +3,24 @@
 from .base import Effect
 from .compression import SidechainCompression
 from .delay import MultiTapDelay
+from .dual_delay import DualDelay
 from .granular_delay import GranularDelay
 from .saturation import TapeSaturation
 from .stereo import MidSideStereoWidener
 from .lfo import LFOModulationEngine
+from .parameter_automation import ParameterAutomation
 
 # Native Python DSP effects using Spotify Pedalboard
 # Import lazily to avoid breaking tests when modules not yet created
 __all__ = [
     "TapeSaturation",
     "MultiTapDelay",
+    "DualDelay",
     "GranularDelay",
     "SidechainCompression",
     "MidSideStereoWidener",
     "LFOModulationEngine",
+    "ParameterAutomation",
     "PedalboardEffectsChain",
     "Envelope",
     "LFO",
@@ -44,6 +48,10 @@ def __getattr__(name: str):
             return _LFO
         elif name == "RandomWalk":
             return _RW
+    if name == "ParameterAutomation":
+        from openmusic.effects.parameter_automation import ParameterAutomation as _cls
+
+        return _cls
     if name == "MasteringChain":
         from openmusic.effects.mastering import MasteringChain as _cls
 

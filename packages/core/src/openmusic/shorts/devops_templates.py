@@ -34,6 +34,7 @@ PRISM_LANGUAGES = {
     "nginx": "nginx",
     "prometheus": "promql",
     "promql": "promql",
+    "cypher": "none",
 }
 
 
@@ -53,7 +54,8 @@ def _render_prism_js() -> str:
 <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-groovy.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-ini.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-nginx.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-promql.min.js"></script>"""
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-promql.min.js"></script>
+"""
 
 
 def _render_prism_css() -> str:
@@ -260,6 +262,7 @@ body {{
   line-height: 1.35;
   text-align: center;
   max-width: 920px;
+  max-height: 86px; /* 2 lines at 32px * 1.35 */
   opacity: 0;
   animation: fadeInUp 0.6s ease-out forwards;
   animation-delay: 1.9s;
@@ -267,6 +270,7 @@ body {{
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
+  transition: opacity 0.6s ease, transform 0.6s ease;
 }}
 
 /* end card - fades in over tip content */
@@ -444,6 +448,12 @@ function initCodeReveal() {{
   setTimeout(() => {{
     const endCard = document.getElementById('end-card');
     if (endCard) endCard.classList.add('show');
+    // Fade out tip content gracefully
+    document.querySelectorAll('.tip-title, .tip-description').forEach(el => {{
+      el.style.transition = 'opacity 0.6s ease, transform 0.6s ease';
+      el.style.opacity = '0';
+      el.style.transform = 'translateY(16px)';
+    }});
   }}, endCardDelay);
 }}
 

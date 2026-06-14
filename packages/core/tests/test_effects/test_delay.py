@@ -320,3 +320,23 @@ class TestMultiTapDelay:
         # Should not raise an error
         output = self.effect.process(audio, params)
         assert output.shape == audio.shape
+
+    def test_feedback_filter_applies_bandpass(self):
+        """Test that feedback filter modifies delay signal."""
+        audio = np.sin(np.linspace(0, 4 * np.pi, 48000))
+        params = {
+            "num_taps": 1,
+            "tap_times_ms": [100],
+            "tap_feedback": [0.5],
+            "master_feedback": 0.5,
+            "wet_dry": 100,
+            "sample_rate": 48000,
+            "feedback_filter_enabled": True,
+            "feedback_filter_freq": 450.0,
+            "feedback_filter_q": 2.0,
+        }
+        filtered = self.effect.process(audio.copy(), params)
+        params_no_filter = dict(params)
+        params_no_filter["feedback_filter_enabled"] = False
+        unfiltered = self.effect.process(audio.copy(), params_no_filter)
+        assert not np.allclose(filtered, unfiltered, atol=1e-6)

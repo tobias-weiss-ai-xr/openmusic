@@ -57,7 +57,7 @@ def _build_config_from_flags(
     cover_theme: str = "dark_industrial",
     model: str = "ace-step",
     model_preset: str = "sft",
-    use_bayesian_markov: bool = False,
+    use_bayesian_markov: bool = True,
 ) -> MixConfig:
     seconds = _parse_length_to_seconds(length)
     return MixConfig(
@@ -135,10 +135,10 @@ def main():
     help="ACE-Step model preset (sft=50 steps, turbo=8 steps, lower VRAM)",
 )
 @click.option(
-    "--use-bayesian-markov",
+    "--no-bayesian-markov",
     is_flag=True,
     default=False,
-    help="Use Bayesian Markov pattern system to reuse pre-generated segments (~80% speedup)",
+    help="Disable Bayesian Markov pattern system (enabled by default)",
 )
 def generate(
     length: str,
@@ -153,7 +153,7 @@ def generate(
     cover_image: Optional[str],
     model: str,
     model_preset: str,
-    use_bayesian_markov: bool,
+    no_bayesian_markov: bool,
 ):
     """Generate a new mix using MixOrchestrator.
 
@@ -184,6 +184,7 @@ def generate(
             cover_theme=cover_theme,
             model=model,
             model_preset=model_preset,
+            use_bayesian_markov=not no_bayesian_markov,
         )
         # Use a progress reporter as a lightweight progress indicator
         total_segments = max(
@@ -426,10 +427,10 @@ def upload(
     help="Audio generation model (default: ace-step)",
 )
 @click.option(
-    "--use-bayesian-markov",
+    "--no-bayesian-markov",
     is_flag=True,
     default=False,
-    help="Use Bayesian Markov pattern system to reuse pre-generated segments (~80% speedup)",
+    help="Disable Bayesian Markov pattern system (enabled by default)",
 )
 def publish(
     length: str,
@@ -454,7 +455,7 @@ def publish(
     key_schedule: Optional[str],
     effects_modifiers: Optional[str],
     model: str,
-    use_bayesian_markov: bool,
+    no_bayesian_markov: bool,
 ):
     """Generate mix, render MP4 with ffmpeg, and upload to YouTube in one command."""
     click.echo("Starting full publish pipeline...")
@@ -498,7 +499,7 @@ def publish(
             key_schedule=key_schedule,
             effects_modifiers=effects_modifiers,
             model=model,
-            use_bayesian_markov=use_bayesian_markov,
+            use_bayesian_markov=not no_bayesian_markov,
         )
         orchestrator = MixOrchestrator(mix_config)
         mix_path = orchestrator.generate_mix()

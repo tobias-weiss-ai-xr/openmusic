@@ -59,11 +59,11 @@ class MidSideStereoWidener(Effect):
             return audio.copy()
 
         # Must be stereo
-        if audio.shape[0] != 2:
+        if audio.shape[1] != 2:
             raise ValueError("Mid-side processing requires stereo audio (2 channels)")
 
-        left = audio[0]
-        right = audio[1]
+        left = audio[:, 0]
+        right = audio[:, 1]
 
         # M/S encoding
         # M = (L + R) / sqrt(2)  (center/mono information)
@@ -90,7 +90,7 @@ class MidSideStereoWidener(Effect):
         output_left = (mid + widthed_side) / np.sqrt(2)
         output_right = (mid - widthed_side) / np.sqrt(2)
 
-        return np.stack([output_left, output_right])
+        return np.column_stack([output_left, output_right])
 
     def _apply_eq(
         self,

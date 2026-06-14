@@ -523,6 +523,25 @@ class MixOrchestrator:
             processed = self._process_segment(raw, i, self.segment_count)
             segments.append(processed)
 
+            # Quality feedback for Bayesian selector
+            if (
+                hasattr(self, "_pattern_selector")
+                and self._pattern_selector is not None
+                and self.config.use_bayesian_markov
+            ):
+                try:
+                    audio, sr = sf.read(str(processed))
+                    rms = np.sqrt(np.mean(audio**2))
+                    peak = np.max(np.abs(audio))
+                    if peak > 0:
+                        crest_factor = peak / rms
+                        quality = max(0.0, min(1.0, 1.0 - (crest_factor - 3.0) / 9.0))
+                        self._pattern_selector.set_quality_feedback(
+                            str(processed), quality
+                        )
+                except Exception:
+                    pass  # Non-critical
+
         # Assemble all segments into final output
         self._assemble_segments(segments, Path(self.config.output_path))
 

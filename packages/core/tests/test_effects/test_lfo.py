@@ -19,19 +19,20 @@ class TestLFOModulationEngine:
         """Test effect initializes correctly."""
         assert self.effect.name == "lfo_modulation"
 
-    def test_process_returns_audio_unchanged(self):
-        """Test that LFO effect doesn't modify audio (pass-through)."""
+    def test_process_modulates_at_100_percent_depth(self):
+        """Test that LFO effect modulates audio at 100% depth."""
         params = {
             "waveform": "sine",
             "rate_hz": 1.0,
-            "depth": 50.0,
+            "depth": 100.0,
             "sample_rate": 48000,
         }
 
-        output = self.effect.process(self.audio_1s.copy(), params)
+        input_audio = self.audio_1s.copy()
+        output = self.effect.process(input_audio, params)
 
-        # Should be identical to input (pass-through)
-        np.testing.assert_allclose(output, self.audio_1s)
+        # At 100% depth, output should be different from input
+        assert not np.allclose(output, input_audio)
 
     def test_sine_waveform_generates_curve(self):
         """Test sine waveform generation."""
@@ -59,8 +60,8 @@ class TestLFOModulationEngine:
 
         output = self.effect.process(self.audio_1s.copy(), params)
 
-        # Should return input unchanged (pass-through)
-        np.testing.assert_allclose(output, self.audio_1s)
+        # At 100% depth, audio should be modulated, not identical
+        assert not np.allclose(output, self.audio_1s)
 
     def test_square_waveform_generates_curve(self):
         """Test square waveform generation."""
@@ -74,8 +75,8 @@ class TestLFOModulationEngine:
 
         output = self.effect.process(self.audio_1s.copy(), params)
 
-        # Should return input unchanged (pass-through)
-        np.testing.assert_allclose(output, self.audio_1s)
+        # At 100% depth, audio should be modulated, not identical
+        assert not np.allclose(output, self.audio_1s)
 
     def test_random_waveform_generates_curve(self):
         """Test random waveform generation."""
@@ -89,8 +90,8 @@ class TestLFOModulationEngine:
 
         output = self.effect.process(self.audio_1s.copy(), params)
 
-        # Should return input unchanged (pass-through)
-        np.testing.assert_allclose(output, self.audio_1s)
+        # At 100% depth, audio should be modulated, not identical
+        assert not np.allclose(output, self.audio_1s)
 
     def test_frequency_affects_curve(self):
         """Test that rate_hz controls LFO frequency."""
@@ -286,13 +287,13 @@ class TestLFOModulationEngine:
         """Test that default parameters work correctly."""
         audio = np.random.randn(48000)
 
-        # Call with minimal params
-        params = {"sample_rate": 48000}
+        # Call with explicit depth=0 to verify passthrough
+        params = {"depth": 0.0, "sample_rate": 48000}
 
         output = self.effect.process(audio, params)
 
         assert output.shape == audio.shape
-        # Should be identical (pass-through)
+        # At 0% depth, output should be identical to input
         np.testing.assert_allclose(output, audio)
 
     def test_stereo_audio(self):
@@ -311,8 +312,8 @@ class TestLFOModulationEngine:
         output = self.effect.process(audio, params)
 
         assert output.shape == audio.shape
-        # Should be identical (pass-through)
-        np.testing.assert_allclose(output, audio)
+        # At 50% depth, audio should be modulated, not identical
+        assert not np.allclose(output, audio)
 
     def test_mono_audio(self):
         """Test that mono audio works correctly."""
@@ -328,6 +329,19 @@ class TestLFOModulationEngine:
         output = self.effect.process(audio, params)
 
         assert output.shape == audio.shape
+        # At 50% depth, audio should be modulated, not identical
+        assert not np.allclose(output, audio)
+
+    def test_zero_depth_passthrough(self):
+        """Test that 0% depth leaves audio unchanged."""
+        audio = np.sin(np.linspace(0, 4 * np.pi, 48000))
+        params = {
+            "waveform": "sine",
+            "rate_hz": 1.0,
+            "depth": 0.0,
+            "sample_rate": 48000,
+        }
+        output = self.effect.process(audio.copy(), params)
         np.testing.assert_allclose(output, audio)
 
     def test_empty_audio(self):

@@ -4,7 +4,7 @@ from unittest.mock import patch
 
 from click.testing import CliRunner
 
-from openmusic.cli import main as cli_main
+from openmusic.cli.main import main as cli_main
 
 
 class DummyMixOrchestrator:

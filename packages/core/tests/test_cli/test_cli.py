@@ -84,3 +84,56 @@ def test_validate_config_valid_and_invalid(tmp_path):
 
     res_invalid = runner.invoke(cli_main, ["validate", str(invalid_file)])
     assert res_invalid.exit_code != 0
+
+
+def test_short_batch_auto_help():
+    """batch-auto shows usage correctly."""
+    runner = CliRunner()
+    result = runner.invoke(cli_main, ["short", "batch-auto", "--help"])
+    assert result.exit_code == 0
+    assert "auto-staggered" in result.output or "Generate N" in result.output
+
+
+def test_short_batch_auto_invalid_category():
+    """Unknown category produces an error. Use --generate-audio to skip file check."""
+    runner = CliRunner()
+    result = runner.invoke(cli_main, [
+        "short", "batch-auto",
+        "--audio", "/dev/null",
+        "--mix-length", "3600",
+        "--count", "2",
+        "--categories", "invalid_cat",
+    ])
+    assert result.exit_code != 0
+    assert "Unknown category" in result.output
+
+
+def test_short_batch_auto_invalid_mix_length():
+    """Invalid mix length produces an error."""
+    runner = CliRunner()
+    result = runner.invoke(cli_main, [
+        "short", "batch-auto",
+        "--audio", "nonexistent.flac",
+        "--mix-length", "garbage",
+    ])
+    assert result.exit_code != 0
+
+
+def test_short_batch_auto_invalid_positions_format():
+    """Batch command catches invalid positions format."""
+    runner = CliRunner()
+    result = runner.invoke(cli_main, [
+        "short", "batch",
+        "--audio", "/dev/null",
+        "--positions", "abc,def",
+    ])
+    assert result.exit_code != 0
+    assert "Invalid positions format" in result.output
+
+
+def test_generate_no_audio_no_generate():
+    """Generate requires either --audio or --generate-audio."""
+    runner = CliRunner()
+    result = runner.invoke(cli_main, ["short", "generate"])
+    assert result.exit_code != 0
+    assert "required" in result.output.lower()

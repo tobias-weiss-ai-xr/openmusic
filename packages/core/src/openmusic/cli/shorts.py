@@ -7,7 +7,13 @@ from pathlib import Path
 import click
 
 from openmusic.shorts.quotes import get_random_quote, get_quotes_by_author, QUOTES
-from openmusic.shorts.pipeline import ShortConfig, ShortsPipeline, generate_batch
+from openmusic.shorts.pipeline import (
+    SHORT_CATEGORIES,
+    ShortConfig,
+    ShortsPipeline,
+    generate_batch,
+    generate_batch_auto,
+)
 from openmusic.shorts.themes import THEME_NAMES
 from openmusic.shorts.devops_content import (
     get_random_devops_tip,
@@ -265,6 +271,98 @@ def batch(
         output_dir=output_dir,
         quote_seed_start=seed_start,
         svg_path=svg,
+        make_shorts=not no_shorts,
+        skip_existing=not no_skip,
+    )
+
+    click.echo(f"\nGenerated {len(results)} shorts:")
+    for r in results:
+        click.echo(f"  {r}")
+
+
+@short.command(name="batch-auto")
+@click.option("--audio", required=True, type=click.Path(exists=True, dir_okay=False),
+              help="Path to audio file (FLAC/WAV) to extract from")
+@click.option("--mix-length", required=True,
+              help="Total mix length in seconds or duration string (e.g. 1h, 30m)")
+@click.option("--count", default=6, type=int,
+              help="Number of shorts to generate (default: 6)")
+@click.option("--duration", default=30, type=int,
+              help="Clip duration in seconds (default: 30)")
+@click.option("--output-dir", default=".",
+              help="Directory for output files (default: current dir)")
+@click.option("--categories", default=None,
+              help="Comma-separated category rotation (default: stoic,meditation,devops)")
+@click.option("--margin", default=60, type=int,
+              help="Seconds to skip from start/end of mix (default: 60)")
+@click.option("--no-shorts", is_flag=True, default=False,
+              help="Skip 9:16 shorts conversion (keep 16:9)")
+@click.option("--no-skip", is_flag=True, default=False,
+              help="Regenerate clips even if output exists")
+@click.option("--verbose", "-v", is_flag=True, default=False,
+              help="Verbose logging")
+def batch_auto(
+    audio: str,
+    mix_length: str,
+    count: int,
+    duration: int,
+    output_dir: str,
+    categories: str | None,
+    margin: int,
+    no_shorts: bool,
+    no_skip: bool,
+    verbose: bool,
+):
+    """Generate N shorts at auto-staggered positions with category rotation.
+
+    Calculates evenly-spaced positions from the total mix length,
+    then generates shorts rotating through content categories
+    (stoic quotes, meditation sentences, devops tips).
+    """
+    if verbose:
+        logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
+
+    # Parse mix length
+    try:
+        seconds = float(mix_length)
+    except ValueError:
+        s = mix_length.lower().strip()
+        if s.endswith("h"):
+            seconds = float(s[:-1]) * 3600.0
+        elif s.endswith("m"):
+            seconds = float(s[:-1]) * 60.0
+        elif s.endswith("s"):
+            seconds = float(s[:-1])
+        else:
+            raise click.ClickException(f"Invalid mix length: {mix_length}")
+
+    # Parse categories
+    cat_list: list[str] | None = None
+    if categories:
+        cat_list = [c.strip().lower() for c in categories.split(",") if c.strip()]
+        for c in cat_list:
+            if c not in SHORT_CATEGORIES:
+                valid = ", ".join(SHORT_CATEGORIES)
+                raise click.ClickException(
+                    f"Unknown category '{c}'. Valid categories: {valid}"
+                )
+
+    click.echo(f"Generating {count} shorts from {audio}")
+    click.echo(f"Mix length: {seconds}s ({mix_length})")
+    click.echo(f"Clip duration: {duration}s")
+    click.echo(f"Categories: {cat_list or 'default rotation'}")
+    click.echo(f"Output dir: {output_dir}")
+
+    Path(output_dir).mkdir(parents=True, exist_ok=True)
+
+    results = generate_batch_auto(
+        audio_path=audio,
+        mix_length=seconds,
+        count=count,
+        output_dir=output_dir,
+        categories=cat_list,
+        clip_duration=duration,
+        margin=float(margin),
         make_shorts=not no_shorts,
         skip_existing=not no_skip,
     )

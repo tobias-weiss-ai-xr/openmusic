@@ -3,7 +3,8 @@
 Combines quote selection, HTML templating, Playwright recording,
 and ffmpeg compositing into a single configurable flow.
 
-Supports both Stoic quotes and DevOps tips content types.
+Supports Stoic quotes, Meditation sentences, DevOps tips,
+and batch generation with auto-positioning and category rotation.
 """
 
 import logging
@@ -28,16 +29,73 @@ from openmusic.shorts.devops_templates import render_devops_html
 
 logger = logging.getLogger(__name__)
 
+# ── Category rotation ───────────────────────────────────────────────
+
+SHORT_CATEGORIES = [
+    "stoic",
+    "meditation",
+    "devops",
+]
+
+
+def auto_staggered_positions(
+    mix_length: float,
+    count: int,
+    *,
+    min_gap: float = 30.0,
+    margin: float = 60.0,
+) -> list[float]:
+    """Compute *count* evenly-spaced positions from a mix of *mix_length* seconds.
+
+    Positions are spread evenly excluding *margin* seconds from start/end
+    and clamped so consecutive positions are at least *min_gap* apart.
+    """
+    if count <= 0:
+        return []
+    usable = max(0.0, mix_length - 2 * margin)
+    if usable <= 0 or count == 1:
+        return [mix_length / 2]
+    step = usable / count
+    gap_check = step >= min_gap
+    positions = []
+    for i in range(count):
+        pos = margin + step * (i + 0.5)
+        if gap_check or i == 0 or pos - positions[-1] >= min_gap:
+            positions.append(pos)
+        else:
+            # fallback: clamp to at least min_gap from previous
+            positions.append(positions[-1] + min_gap)
+    return positions
+
+
+def category_generator(categories: list[str] | None = None):
+    """Yield category names in round-robin rotation.
+
+    Args:
+        categories: List of category names. Defaults to SHORT_CATEGORIES.
+
+    Yields:
+        Category name string on each iteration, cycling forever.
+    """
+    if not categories:
+        categories = list(SHORT_CATEGORIES)
+    while True:
+        for cat in categories:
+            yield cat
+
 
 @dataclass
 class ShortConfig:
     """Configuration for generating a single short clip."""
 
+    # Content source (one of these should be set)
+    category: str = "stoic"
     quote: Optional[StoicQuote] = None
     quote_text: Optional[str] = None
     quote_author: Optional[str] = None
     quote_seed: Optional[int] = None
     devops_seed: Optional[int] = None
+    # Audio
     audio_path: str = ""
     audio_start_time: float = 0.0
     clip_duration: int = 30
@@ -47,7 +105,7 @@ class ShortConfig:
     svg_path: Optional[str] = None
     theme: str = "default"
     tags: list[str] = field(default_factory=lambda: [
-        "stoic", "dub techno", "meditation", "philosophy", "openmusic",
+        "dub techno", "openmusic",
     ])
 
 
@@ -69,9 +127,10 @@ class ShortsPipeline:
         logger.info("[%s] %.0f%%", stage, percent)
 
     def generate_short(self, config: ShortConfig) -> str:
-        """Run the full pipeline: quote → HTML → record → compose.
+        """Run the full pipeline: HTML → record → compose.
 
-        Supports both StoicQuote and DevOpsTip content types.
+        Supports stoic quotes, meditation sentences, and devops tips
+        based on *config.category*.
 
         Args:
             config: Configuration for the short.
@@ -79,12 +138,21 @@ class ShortsPipeline:
         Returns:
             Path to the final output video file.
         """
-        if config.devops_seed is not None:
+        cat = config.category or "stoic"
+
+        if cat == "devops" or config.devops_seed is not None:
             tip = get_random_devops_tip(seed=config.devops_seed)
             html_content = render_devops_html(
                 tip=tip,
                 svg_path=config.svg_path,
                 duration=config.clip_duration,
+            )
+        elif cat == "meditation":
+            from openmusic.shorts.meditation import render_meditation_flow
+
+            html_content = render_meditation_flow(
+                duration_per_sentence=config.clip_duration,
+                portrait=config.portrait,
             )
         elif config.quote:
             quote = config.quote
@@ -224,6 +292,8 @@ def generate_batch(
     svg_path: Optional[str] = None,
     make_shorts: bool = True,
     skip_existing: bool = True,
+    categories: Optional[list[str]] = None,
+    clip_duration: int = 30,
 ) -> list[str]:
     """Generate multiple shorts from a single audio file at given positions.
 
@@ -235,12 +305,15 @@ def generate_batch(
         svg_path: Path to SVG file.
         make_shorts: Convert to 9:16 format.
         skip_existing: Skip clips whose output already exists.
+        categories: Category rotation list (default: ["stoic"]).
+        clip_duration: Duration of each clip in seconds.
 
     Returns:
         List of output file paths.
     """
     pipeline = ShortsPipeline()
     outputs = []
+    cat_gen = category_generator(categories or ["stoic"])
 
     for i, pos in enumerate(positions):
         output_name = f"short_{i+1}_{int(pos)}s.mp4"
@@ -251,15 +324,64 @@ def generate_batch(
             outputs.append(output_path)
             continue
 
+        category = next(cat_gen)
         config = ShortConfig(
+            category=category,
             audio_path=audio_path,
             audio_start_time=pos,
+            clip_duration=clip_duration,
             output_path=output_path,
             make_shorts=make_shorts,
             svg_path=svg_path,
             quote_seed=quote_seed_start + i,
+            devops_seed=quote_seed_start + i,
         )
         result = pipeline.generate_short(config)
         outputs.append(result)
 
     return outputs
+
+
+def generate_batch_auto(
+    audio_path: str,
+    mix_length: float,
+    *,
+    count: int = 6,
+    output_dir: str = ".",
+    categories: Optional[list[str]] = None,
+    clip_duration: int = 30,
+    margin: float = 60.0,
+    make_shorts: bool = True,
+    skip_existing: bool = True,
+) -> list[str]:
+    """Generate N shorts at automatically staggered positions.
+
+    Combines auto_staggered_positions with generate_batch.
+
+    Args:
+        audio_path: Path to audio file to extract from.
+        mix_length: Total mix duration in seconds.
+        count: Number of shorts to generate.
+        output_dir: Directory for output files.
+        categories: Category rotation list.
+        clip_duration: Duration of each clip in seconds.
+        margin: Seconds to skip from start/end.
+        make_shorts: Convert to 9:16 format.
+        skip_existing: Skip clips whose output already exists.
+
+    Returns:
+        List of output file paths.
+    """
+    positions = auto_staggered_positions(
+        mix_length, count, margin=margin, min_gap=float(clip_duration)
+    )
+    return generate_batch(
+        audio_path=audio_path,
+        positions=positions,
+        output_dir=output_dir,
+        svg_path=None,
+        make_shorts=make_shorts,
+        skip_existing=skip_existing,
+        categories=categories,
+        clip_duration=clip_duration,
+    )

@@ -3,6 +3,8 @@
 import numpy as np
 import pytest
 
+pytest.importorskip("aubio", reason="aubio is not installed (optional dep for beat tracking)")
+
 from openmusic.analysis.beat_tracker import (
     detect_tempo,
     detect_beats,

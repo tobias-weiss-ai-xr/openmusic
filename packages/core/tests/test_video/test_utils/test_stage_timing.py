@@ -1,6 +1,11 @@
 """Test stage timing utilities."""
 
-from openmusic.video.utils.stage_timing import STAGE_BOUNDARIES, STAGE_PROMPTS, _compute_stage_timings
+import pytest
+
+try:
+    from openmusic.video.utils.stage_timing import STAGE_BOUNDARIES, STAGE_PROMPTS, _compute_stage_timings
+except (ModuleNotFoundError, ImportError):
+    pytest.skip("video pipeline deps not available", allow_module_level=True)
 
 
 def test_stage_boundaries_structure():

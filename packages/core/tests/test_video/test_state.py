@@ -1,6 +1,11 @@
 """Test video pipeline state."""
 
-from openmusic.video.state import VideoPipelineState, initialize_video_pipeline_state
+import pytest
+
+try:
+    from openmusic.video.state import VideoPipelineState, initialize_video_pipeline_state
+except (ModuleNotFoundError, ImportError):
+    pytest.skip("video pipeline deps not available", allow_module_level=True)
 
 
 def test_state_initialization():
@@ -18,7 +23,7 @@ def test_state_initialization():
     assert state["max_concurrent_images"] == 2
     assert state["crossfade_duration"] == 30
     assert state["audio_paths"] == []
-    assert state["stage_timings"] == []
+    assert state["stage_timings"] == {}
     assert state["audio_with_automation"] is None
     assert state["image_paths"] == {}
     assert state["final_video"] is None

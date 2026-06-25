@@ -300,7 +300,7 @@ class TestLFOModulationEngine:
         """Test that stereo audio works correctly."""
         left = np.sin(np.linspace(0, 4 * np.pi, 48000))
         right = np.cos(np.linspace(0, 4 * np.pi, 48000))
-        audio = np.stack([left, right])
+        audio = np.column_stack([left, right])
 
         params = {
             "waveform": "sine",

@@ -39,7 +39,7 @@ class TestSidechainCompression:
         """Test processing stereo audio signal."""
         left = np.sin(np.linspace(0, 4 * np.pi, 48000))
         right = np.cos(np.linspace(0, 4 * np.pi, 48000))
-        audio = np.stack([left, right])
+        audio = np.column_stack([left, right])
 
         params = {
             "threshold_db": -20,
@@ -54,7 +54,7 @@ class TestSidechainCompression:
         output = self.effect.process(audio, params)
 
         assert output.shape == audio.shape
-        assert output.shape[0] == 2  # Stereo channels
+        assert output.shape[1] == 2
 
     def test_threshold_parameter_affects_compression(self):
         """Test that threshold determines when compression kicks in."""
@@ -329,11 +329,9 @@ class TestSidechainCompression:
         assert not np.allclose(output, audio)
 
     def test_stereo_channels_processed_independently(self):
-        """Test that stereo channels are processed independently."""
         left = np.random.randn(48000) * 0.5
         right = np.random.randn(48000) * 0.3
-
-        audio = np.stack([left, right])
+        audio = np.column_stack([left, right])
 
         params = {
             "threshold_db": -20,
@@ -347,9 +345,8 @@ class TestSidechainCompression:
 
         output = self.effect.process(audio, params)
 
-        assert output.shape == (2, 48000)
-        # Channels should remain different
-        assert not np.allclose(output[0], output[1])
+        assert output.shape == (48000, 2)
+        assert not np.allclose(output[:, 0], output[:, 1])
 
     def test_zero_input(self):
         """Test processing zero input."""

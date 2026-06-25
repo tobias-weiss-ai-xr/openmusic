@@ -38,7 +38,7 @@ class TestGranularDelay:
         """Test processing stereo audio signal."""
         left = np.sin(np.linspace(0, 4 * np.pi, 48000))
         right = np.cos(np.linspace(0, 4 * np.pi, 48000))
-        audio = np.stack([left, right])
+        audio = np.column_stack([left, right])
 
         params = {
             "grain_size_ms": 50,
@@ -52,7 +52,7 @@ class TestGranularDelay:
         output = self.effect.process(audio, params)
 
         assert output.shape == audio.shape
-        assert output.shape[0] == 2  # Stereo channels
+        assert output.shape[1] == 2
 
     def test_grain_size_parameter_affects_output(self):
         """Test that grain_size parameter changes output texture."""
@@ -268,7 +268,7 @@ class TestGranularDelay:
         left = np.random.randn(48000)
         right = np.random.randn(48000) * 0.5  # Different amplitude
 
-        audio = np.stack([left, right])
+        audio = np.column_stack([left, right])
 
         params = {
             "grain_size_ms": 50,
@@ -281,9 +281,8 @@ class TestGranularDelay:
 
         output = self.effect.process(audio, params)
 
-        assert output.shape == (2, 48000)
-        # Channels should remain different
-        assert not np.allclose(output[0], output[1])
+        assert output.shape == (48000, 2)
+        assert not np.allclose(output[:, 0], output[:, 1])
 
     def test_stereo_independence_with_different_input(self):
         """Test stereo channels maintain their characteristics."""
@@ -293,7 +292,7 @@ class TestGranularDelay:
         # Right channel: different sine wave
         right = np.sin(np.linspace(0, 8 * np.pi, 48000))
 
-        audio = np.stack([left, right])
+        audio = np.column_stack([left, right])
 
         params = {
             "grain_size_ms": 50,
@@ -306,10 +305,9 @@ class TestGranularDelay:
 
         output = self.effect.process(audio, params)
 
-        assert output.shape == (2, 48000)
-        # Both channels should have output
-        assert np.std(output[0]) > 0.001
-        assert np.std(output[1]) > 0.001
+        assert output.shape == (48000, 2)
+        assert np.std(output[:, 0]) > 0.001
+        assert np.std(output[:, 1]) > 0.001
 
     def test_zero_input(self):
         """Test processing zero input."""

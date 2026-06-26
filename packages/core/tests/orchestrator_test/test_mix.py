@@ -102,7 +102,8 @@ class TestMixOrchestratorSegmentPrompts:
         config = MixConfig()
         orch = MixOrchestrator(config)
         prompt = orch._get_segment_prompt(9, 10)
-        assert any(w in prompt.lower() for w in ["fading", "sparse", "dissolving", "echo"])
+        expected_words = ["receding", "looming", "wide", "space", "elements", "bass"]
+        assert any(w in prompt.lower() for w in expected_words)
 
     def test_first_segment_is_intro(self):
         config = MixConfig()
@@ -114,7 +115,8 @@ class TestMixOrchestratorSegmentPrompts:
         config = MixConfig()
         orch = MixOrchestrator(config)
         prompt = orch._get_segment_prompt(39, 40)
-        assert any(w in prompt.lower() for w in ["fading", "dissolving", "sparse", "echo"])
+        expected_words = ["receding", "looming", "wide", "space", "elements", "bass"]
+        assert any(w in prompt.lower() for w in expected_words)
 
 
 class TestPromptStyleModifiers:

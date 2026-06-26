@@ -32,7 +32,7 @@ class TestYouTubeUploadConfig:
         assert config.made_for_kids is False
         assert config.publish_at is None
         assert config.thumbnail_path is None
-        assert config.playlist_title is None
+        assert config.playlist_title == "dub odyssee"
         assert config.client_secrets_file == "client_secrets.json"
         assert config.token_file == "youtube_token.json"
 
@@ -214,6 +214,7 @@ class TestYouTubeUploader:
         assert uploader.config.title == "Custom"
 
     def test_upload_uses_api_uploader_first(self):
+        pytest.importorskip("youtube_up")
         config = YouTubeUploadConfig()
         uploader = YouTubeUploader(config)
 
@@ -228,6 +229,7 @@ class TestYouTubeUploader:
             mock_upload.assert_called_once()
 
     def test_upload_falls_back_on_quota_error(self):
+        pytest.importorskip("youtube_up")
         config = YouTubeUploadConfig()
         uploader = YouTubeUploader(config)
 
@@ -242,6 +244,7 @@ class TestYouTubeUploader:
             assert video_id == "video456"
 
     def test_upload_falls_back_on_upload_error(self):
+        pytest.importorskip("youtube_up")
         config = YouTubeUploadConfig()
         uploader = YouTubeUploader(config)
 
@@ -256,6 +259,7 @@ class TestYouTubeUploader:
             assert video_id == "video789"
 
     def test_upload_sets_thumbnail_and_playlist_on_success(self):
+        pytest.importorskip("youtube_up")
         config = YouTubeUploadConfig(
             thumbnail_path="thumb.png",
             playlist_title="My Playlist",

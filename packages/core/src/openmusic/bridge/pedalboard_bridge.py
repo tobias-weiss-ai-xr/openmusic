@@ -154,8 +154,11 @@ class PythonDSPBridge:
         assert chain.board is not None, "Pedalboard board should be initialized"
         processed = chain.board(audio, sample_rate)
 
-        if processed.ndim == 1:
-            processed = np.column_stack([processed, processed])
+        if processed.ndim == 1 or processed.shape[1] < 2:
+            if processed.ndim == 1:
+                processed = np.column_stack([processed, processed])
+            else:
+                processed = np.column_stack([processed[:, 0], processed[:, 0]])
 
         # --- Stage C: Sidechain compression ---
         if self.sidechain_enabled:

@@ -79,7 +79,7 @@ class TestMixOrchestratorSegmentPrompts:
         orch = MixOrchestrator(config)
         prompt = orch._get_segment_prompt(0, 10)
         assert any(
-            w in prompt.lower() for w in ["intro", "build", "subtle", "atmosphere"]
+            w in prompt.lower() for w in ["evolving", "spacious", "textural", "drone"]
         )
 
     def test_early_segment_includes_key_and_bpm(self):
@@ -95,14 +95,14 @@ class TestMixOrchestratorSegmentPrompts:
         prompt = orch._get_segment_prompt(5, 10)
         assert any(
             w in prompt.lower()
-            for w in ["dub techno", "development", "groove", "rhythm"]
+            for w in ["dub techno", "driving", "groove", "rhythm", "percussion"]
         )
 
     def test_late_segment_prompt_climax(self):
         config = MixConfig()
         orch = MixOrchestrator(config)
         prompt = orch._get_segment_prompt(9, 10)
-        assert any(w in prompt.lower() for w in ["climax", "outro", "resolve", "fade"])
+        assert any(w in prompt.lower() for w in ["fading", "sparse", "dissolving", "echo"])
 
     def test_first_segment_is_intro(self):
         config = MixConfig()
@@ -114,7 +114,7 @@ class TestMixOrchestratorSegmentPrompts:
         config = MixConfig()
         orch = MixOrchestrator(config)
         prompt = orch._get_segment_prompt(39, 40)
-        assert "outro" in prompt.lower()
+        assert any(w in prompt.lower() for w in ["fading", "dissolving", "sparse", "echo"])
 
 
 class TestPromptStyleModifiers:

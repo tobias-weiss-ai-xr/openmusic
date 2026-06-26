@@ -1,6 +1,7 @@
 """Tests for MCP orchestrator."""
 
 import pytest
+from unittest.mock import patch
 
 
 class TestMCPOrchestrator:
@@ -24,5 +25,6 @@ class TestMCPOrchestrator:
         from openmusic.mcp.orchestrator import MCPOrchestrator, MCPConfig
 
         orch = MCPOrchestrator(MCPConfig())
-        status = orch.get_ableton_status()
+        with patch.dict("sys.modules", {"pythonosc": None, "pythonosc.udp_client": None}):
+            status = orch.get_ableton_status()
         assert status["connected"] is False

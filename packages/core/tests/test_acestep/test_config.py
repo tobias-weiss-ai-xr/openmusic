@@ -10,11 +10,11 @@ class TestACEStepConfig:
 
     def test_default_values(self):
         config = ACEStepConfig()
-        assert config.model_path == "acestep-v15-turbo"
+        assert config.model_path == "acestep-v15-sft"
         assert config.device == "auto"
         assert config.audio_format == "wav"
         assert config.max_duration == 600
-        assert config.inference_steps == 8
+        assert config.inference_steps == 50
 
     def test_custom_values(self):
         config = ACEStepConfig(

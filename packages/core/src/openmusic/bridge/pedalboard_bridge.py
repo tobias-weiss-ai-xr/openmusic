@@ -154,6 +154,9 @@ class PythonDSPBridge:
         assert chain.board is not None, "Pedalboard board should be initialized"
         processed = chain.board(audio, sample_rate)
 
+        if processed.ndim == 1:
+            processed = np.column_stack([processed, processed])
+
         # --- Stage C: Sidechain compression ---
         if self.sidechain_enabled:
             from openmusic.effects.compression import SidechainCompression

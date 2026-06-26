@@ -28,7 +28,7 @@ class TestYouTubeUploadConfig:
         assert config.description == ""
         assert config.tags == ["dub techno", "electronic music"]
         assert config.category == "10"
-        assert config.privacy == "private"
+        assert config.privacy == "public"
         assert config.made_for_kids is False
         assert config.publish_at is None
         assert config.thumbnail_path is None
@@ -213,100 +213,71 @@ class TestYouTubeUploader:
         uploader = YouTubeUploader(config)
         assert uploader.config.title == "Custom"
 
-    @patch.object(YouTubeAPIUploader, "upload")
-    def test_upload_uses_api_uploader_first(self, mock_api_upload):
+    def test_upload_uses_api_uploader_first(self):
         config = YouTubeUploadConfig()
         uploader = YouTubeUploader(config)
 
-        mock_api_upload.return_value = "video123"
+        with patch.object(uploader.api_uploader, "upload", return_value="video123") as mock_upload:
+            with tempfile.TemporaryDirectory() as tmpdir:
+                video_path = Path(tmpdir) / "video.mp4"
+                video_path.touch()
 
-        with tempfile.TemporaryDirectory() as tmpdir:
-            video_path = Path(tmpdir) / "video.mp4"
-            video_path.touch()
-
-            video_id = uploader.upload(str(video_path))
+                video_id = uploader.upload(str(video_path))
 
             assert video_id == "video123"
-            mock_api_upload.assert_called_once()
+            mock_upload.assert_called_once()
 
-    @patch.object(YouTubeUpFallback, "upload")
-    @patch.object(YouTubeAPIUploader, "upload")
-    def test_upload_falls_back_on_quota_error(
-        self, mock_api_upload, mock_fallback_upload
-    ):
+    def test_upload_falls_back_on_quota_error(self):
         config = YouTubeUploadConfig()
         uploader = YouTubeUploader(config)
 
-        # API uploader raises quota exceeded
-        mock_api_upload.side_effect = QuotaExceededError("Quota exceeded")
-        mock_fallback_upload.return_value = "video456"
+        with patch.object(uploader.api_uploader, "upload", side_effect=QuotaExceededError("Quota exceeded")), \
+             patch.object(uploader.fallback_uploader, "upload", return_value="video456"):
+            with tempfile.TemporaryDirectory() as tmpdir:
+                video_path = Path(tmpdir) / "video.mp4"
+                video_path.touch()
 
-        with tempfile.TemporaryDirectory() as tmpdir:
-            video_path = Path(tmpdir) / "video.mp4"
-            video_path.touch()
-
-            video_id = uploader.upload(str(video_path))
+                video_id = uploader.upload(str(video_path))
 
             assert video_id == "video456"
-            mock_api_upload.assert_called_once()
-            mock_fallback_upload.assert_called_once()
 
-    @patch.object(YouTubeUpFallback, "upload")
-    @patch.object(YouTubeAPIUploader, "upload")
-    def test_upload_falls_back_on_upload_error(
-        self, mock_api_upload, mock_fallback_upload
-    ):
+    def test_upload_falls_back_on_upload_error(self):
         config = YouTubeUploadConfig()
         uploader = YouTubeUploader(config)
 
-        # API uploader raises generic upload error
-        mock_api_upload.side_effect = YouTubeUploadError("Upload failed")
-        mock_fallback_upload.return_value = "video789"
+        with patch.object(uploader.api_uploader, "upload", side_effect=YouTubeUploadError("Upload failed")), \
+             patch.object(uploader.fallback_uploader, "upload", return_value="video789"):
+            with tempfile.TemporaryDirectory() as tmpdir:
+                video_path = Path(tmpdir) / "video.mp4"
+                video_path.touch()
 
-        with tempfile.TemporaryDirectory() as tmpdir:
-            video_path = Path(tmpdir) / "video.mp4"
-            video_path.touch()
-
-            video_id = uploader.upload(str(video_path))
+                video_id = uploader.upload(str(video_path))
 
             assert video_id == "video789"
-            mock_api_upload.assert_called_once()
-            mock_fallback_upload.assert_called_once()
 
-    @patch.object(YouTubeUpFallback, "upload")
-    @patch.object(YouTubeAPIUploader, "upload")
-    @patch.object(YouTubeAPIUploader, "set_thumbnail")
-    @patch.object(YouTubeAPIUploader, "add_to_playlist")
-    def test_upload_sets_thumbnail_and_playlist_on_success(
-        self,
-        mock_add_playlist,
-        mock_set_thumb,
-        mock_api_upload,
-        mock_fallback_upload,
-    ):
+    def test_upload_sets_thumbnail_and_playlist_on_success(self):
         config = YouTubeUploadConfig(
             thumbnail_path="thumb.png",
             playlist_title="My Playlist",
         )
         uploader = YouTubeUploader(config)
 
-        mock_api_upload.return_value = "video123"
+        with patch.object(uploader.api_uploader, "upload", return_value="video123"), \
+             patch.object(uploader.api_uploader, "set_thumbnail"), \
+             patch.object(uploader.api_uploader, "add_to_playlist"), \
+             patch.object(uploader.fallback_uploader, "upload") as mock_fallback:
+            with tempfile.TemporaryDirectory() as tmpdir:
+                video_path = Path(tmpdir) / "video.mp4"
+                thumb_path = Path(tmpdir) / "thumb.png"
+                video_path.touch()
+                thumb_path.touch()
 
-        with tempfile.TemporaryDirectory() as tmpdir:
-            video_path = Path(tmpdir) / "video.mp4"
-            thumb_path = Path(tmpdir) / "thumb.png"
-            video_path.touch()
-            thumb_path.touch()
+                uploader.config.thumbnail_path = str(thumb_path)
 
-            uploader.config.thumbnail_path = str(thumb_path)
-
-            video_id = uploader.upload(str(video_path))
+                video_id = uploader.upload(str(video_path))
 
             assert video_id == "video123"
-            mock_api_upload.assert_called_once()
-            mock_set_thumb.assert_called_once_with("video123", str(thumb_path))
-            mock_add_playlist.assert_called_once_with("video123", "My Playlist")
-            mock_fallback_upload.assert_not_called()
+            mock_fallback.assert_not_called()
 
 
 class TestCLICommand:

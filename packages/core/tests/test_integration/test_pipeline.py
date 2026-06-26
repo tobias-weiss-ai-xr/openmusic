@@ -301,7 +301,7 @@ class TestBridgeConfigSchema:
             return output_path
 
         with patch.object(orch.bridge, "call_audio_engine", side_effect=intercept):
-            orch._process_segment(stem)
+            orch._process_segment(stem, 0, 1)
 
         return captured
 

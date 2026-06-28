@@ -2,11 +2,33 @@
 
 import sys
 from unittest.mock import MagicMock
+import numpy as np
 
+
+def _mock_pedalboard_call(audio, sample_rate):
+    """Mock pedalboard call that returns audio with proper shape attributes."""
+    # Return input audio unchanged but ensure it has proper shape
+    if audio.ndim == 1:
+        return np.column_stack([audio, audio])
+    return audio
+
+
+class MockPedalboard:
+    """Mock Pedalboard class that returns proper numpy arrays when called."""
+
+    def __init__(self, effects=None):
+        self.effects = effects or []
+
+    def __call__(self, audio, sample_rate):
+        return _mock_pedalboard_call(audio, sample_rate)
+
+
+# Create the mock pedalboard module
 _pb = MagicMock()
-_pb.load_plugin = MagicMock()
-_pb.Pedalboard = MagicMock()
 _pb.__version__ = "0.9.0"
+_pb.Pedalboard = MockPedalboard
+_pb.load_plugin = MagicMock()
+
 sys.modules["pedalboard"] = _pb
 sys.modules["pedalboard_native"] = MagicMock()
 

@@ -102,8 +102,12 @@ class TestMixOrchestratorSegmentPrompts:
         config = MixConfig()
         orch = MixOrchestrator(config)
         prompt = orch._get_segment_prompt(9, 10)
-        expected_words = ["receding", "looming", "wide", "space", "elements", "bass"]
-        assert any(w in prompt.lower() for w in expected_words)
+        # For segment 9 out of 10, it should be in a 'decay-one' phase.
+        # The prompt uses STRUCTURE_CUES and STYLE_MODIFIERS.
+        expected_cue_words = ["receding", "looming", "wide", "space", "elements", "bass"]
+        expected_modifier_words = ["atmospheric", "percussive", "drone", "minimal", "spacious", "filtered", "hypnotic", "rolling"]
+        assert any(w in prompt.lower() for w in expected_cue_words)
+        assert any(w in prompt.lower() for w in expected_modifier_words)
 
     def test_first_segment_is_intro(self):
         config = MixConfig()
@@ -115,7 +119,7 @@ class TestMixOrchestratorSegmentPrompts:
         config = MixConfig()
         orch = MixOrchestrator(config)
         prompt = orch._get_segment_prompt(39, 40)
-        expected_words = ["receding", "looming", "wide", "space", "elements", "bass"]
+        expected_words = ["fading", "sparse", "dissolving", "echoes", "silence"]
         assert any(w in prompt.lower() for w in expected_words)
 
 

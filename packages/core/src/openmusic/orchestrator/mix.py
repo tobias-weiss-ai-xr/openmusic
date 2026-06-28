@@ -102,9 +102,9 @@ STAGE_BOUNDARIES = [
     (0.60, "peak-one"),
     (0.75, "post-peak"),
     (0.85, "peak-two"),
-    (1.00, "decay-one"),
-    (1.15, "decay-two"),
-    (1.30, "dissolution"),
+    (0.88, "decay-one"),
+    (0.94, "decay-two"),
+    (0.975, "dissolution"),
 ]
 
 

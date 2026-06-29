@@ -20,7 +20,7 @@
     "vitest": "^4.1.2"
   },
   "dependencies": {
-    "web-audio-api": "^1.2.0"
+    "web-audio-api": "^1.5.1"
   },
   "typedoc": {
     "entryPoints": [

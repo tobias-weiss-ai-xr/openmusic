@@ -9,15 +9,15 @@ importers:
   .:
     dependencies:
       web-audio-api:
-        specifier: ^1.2.0
-        version: 1.2.0
+        specifier: ^1.5.1
+        version: 1.5.1
     devDependencies:
       '@types/node':
         specifier: ^25.5.0
         version: 25.5.0
       '@vitest/coverage-v8':
         specifier: ^4.1.4
-        version: 4.1.4(vitest@4.1.2(@types/node@25.5.0)(vite@8.0.3(@types/node@25.5.0)(yaml@2.8.3)))
+        version: 4.1.4(vitest@4.1.2(@types/node@25.5.0)(vite@8.0.3(@emnapi/core@1.9.1)(@emnapi/runtime@1.9.1)(@types/node@25.5.0)(yaml@2.8.3)))
       playwright:
         specifier: ^1.60.0
         version: 1.60.0
@@ -32,7 +32,7 @@ importers:
         version: 5.9.3
       vitest:
         specifier: ^4.1.2
-        version: 4.1.2(@types/node@25.5.0)(vite@8.0.3(@types/node@25.5.0)(yaml@2.8.3))
+        version: 4.1.2(@types/node@25.5.0)(vite@8.0.3(@emnapi/core@1.9.1)(@emnapi/runtime@1.9.1)(@types/node@25.5.0)(yaml@2.8.3))
 
   packages/cli:
     dependencies:
@@ -45,48 +45,80 @@ importers:
     devDependencies:
       vitest:
         specifier: ^4.1.2
-        version: 4.1.2(@types/node@25.5.0)(vite@8.0.3(@types/node@25.5.0)(yaml@2.8.3))
+        version: 4.1.2(@types/node@25.5.0)(vite@8.0.3(@emnapi/core@1.9.1)(@emnapi/runtime@1.9.1)(@types/node@25.5.0)(yaml@2.8.3))
 
   packages/effects:
     dependencies:
       web-audio-api:
-        specifier: ^1.2.0
-        version: 1.2.0
+        specifier: ^1.5.1
+        version: 1.5.1
     devDependencies:
       '@types/node':
         specifier: ^25.5.0
         version: 25.5.0
       vitest:
         specifier: ^4.1.2
-        version: 4.1.2(@types/node@25.5.0)(vite@8.0.3(@types/node@25.5.0)(yaml@2.8.3))
+        version: 4.1.2(@types/node@25.5.0)(vite@8.0.3(@emnapi/core@1.9.1)(@emnapi/runtime@1.9.1)(@types/node@25.5.0)(yaml@2.8.3))
 
   packages/patterns:
     devDependencies:
       vitest:
         specifier: ^4.1.2
-        version: 4.1.2(@types/node@25.5.0)(vite@8.0.3(@types/node@25.5.0)(yaml@2.8.3))
+        version: 4.1.2(@types/node@25.5.0)(vite@8.0.3(@emnapi/core@1.9.1)(@emnapi/runtime@1.9.1)(@types/node@25.5.0)(yaml@2.8.3))
 
 packages:
 
-  '@audio/aac-decode@1.0.2':
-    resolution: {integrity: sha512-uRt4BFvAv9KFKfR8HkBWOfw54CFGRJH8GCTCsYXRwG2WpELjyfovYdKuhTxCe7qxu4ideb8vOYTZgfn/mZm/4A==}
+  '@audio/decode-aac@1.2.0':
+    resolution: {integrity: sha512-Up0v4gCdnVyhCrT01QVPC9gaWOwj5ruB0pLtsF2H15++6KjwsxqvKPwSM6CxpWUwB3LAWQPwNC6s809pu87tRw==}
     engines: {node: '>=16'}
-    deprecated: Package no longer supported. Contact Support at https://www.npmjs.com/support for more info.
 
-  '@audio/aiff-decode@1.0.0':
-    resolution: {integrity: sha512-p3lkQIJ0qpGXpK/q7l+h6eK8zQZ5ohk4UO52w4tHGSxljXui7OEIqtmYNqDzXUVtkuDuW2yBC8zkomv8kt1IJQ==}
+  '@audio/decode-aiff@1.1.3':
+    resolution: {integrity: sha512-HfPyBizU1ro9Mq75W5+A1GifkWaFcLpfjPJXNwR9koPTIjkefDDwSsYBLNjLgEettQz639xKAVFHTV8SrvTsIg==}
     engines: {node: '>=16'}
-    deprecated: Package no longer supported. Contact Support at https://www.npmjs.com/support for more info.
 
-  '@audio/amr-decode@1.0.0':
-    resolution: {integrity: sha512-B9T57nXhQgi7B5aVSET1Te4j9eNZVrMSL8azurD0c/FGyJwp5saLCzuC9EV3J1s/F7z5676xA7r6nsNCwAhyCQ==}
+  '@audio/decode-amr@1.1.1':
+    resolution: {integrity: sha512-iIiY4YHaJ30isZVejhB/taO/jy7NVIveK/j6xPITqz/M/5JXC1tK5PMZ5PJ+Kni0LKGB+QN2BBonefKNkKr/VA==}
     engines: {node: '>=16'}
-    deprecated: Package no longer supported. Contact Support at https://www.npmjs.com/support for more info.
 
-  '@audio/caf-decode@1.0.0':
-    resolution: {integrity: sha512-CwvgCA+rm3rI5e811R5cBjl1DYB4+6BiNNUucwWrU2XSX3eiP+H2Tfn5CsBc/IE8+OXzbzkV8YoDuyX9+3UDyQ==}
+  '@audio/decode-caf@1.2.0':
+    resolution: {integrity: sha512-AbrBNtPT+0Qy5aZa3WbectRypGS0Xypaf9dwYgo4hOgN1kJ+fTtuBfnE339AvvsPZk26rC7LfQbTh1iZw1KxMQ==}
     engines: {node: '>=16'}
-    deprecated: Package no longer supported. Contact Support at https://www.npmjs.com/support for more info.
+
+  '@audio/decode-flac@1.1.0':
+    resolution: {integrity: sha512-d47Cxf91m1A7G0ketvWDmnn+qI9UaqEuZF0JpdVgGjjnfZQZ/3C8U3MM6nSsRaz4JZ904HtMkLUMF0yNEHXbJQ==}
+    engines: {node: '>=16'}
+
+  '@audio/decode-mp3@1.1.0':
+    resolution: {integrity: sha512-eOBqdICwjQ0P9z6ei0wXmXVTW/tIiQ4YGsG3QMFJsdrGORhNQh6paQz53utIcVndmri9xfQStqerxMGt+82ygQ==}
+    engines: {node: '>=16'}
+
+  '@audio/decode-opus@1.1.1':
+    resolution: {integrity: sha512-0rzqqdsGtImQvv5+TiX9h4oXf4OcemMmIOlOETUCSnopw4tltwkXyoD6dWEZ6tby3i9aDdGjfGWtJwi05T9Zdw==}
+    engines: {node: '>=16'}
+
+  '@audio/decode-qoa@1.0.0':
+    resolution: {integrity: sha512-4O57YMprL+AZtxPVOgyDhUr2C+bVcp2cHrMKzBc4zo1ZJgITLZtfVA8TklTJEiLbvVfG2F0j44xHOTqCFhqvbA==}
+    engines: {node: '>=16'}
+
+  '@audio/decode-vorbis@1.1.1':
+    resolution: {integrity: sha512-SyFNpyiER09eixoZrZWOYPQVy0+XKfgx0Q3lebvtj0Onm8EmySpud0Rd5BZOkYHH/dPiueic3CX1q4BRes2y8Q==}
+    engines: {node: '>=16'}
+
+  '@audio/decode-wav@1.3.0':
+    resolution: {integrity: sha512-eruDctPtu42Fqf3Kya965+poD2aUlK3mSpKcXgxH1o6OzVdVbfsf26tJnS3JZNrj92mIMmXKwKO0nM67WzCTfQ==}
+
+  '@audio/decode-webm@1.2.1':
+    resolution: {integrity: sha512-UnlDUaPI7PF+I9neTF5LJ7NNrFgvi0zj8PsPcvkSf+NWW08UnbxgsN9WgtpY731R8MPMM10cZKGEoN0kqxT15Q==}
+    engines: {node: '>=16'}
+
+  '@audio/decode-wma@1.1.2':
+    resolution: {integrity: sha512-zjmvnuhjSx6i8C8xPLxoNwfLxBvTeo2zf8L0Z8LM1H3HlwyWZEEfAlIppNf794f/mhsnbRAnwCpwQ1HklMIJrg==}
+    engines: {node: '>=16'}
+
+  '@audio/speaker-darwin-arm64@2.0.4':
+    resolution: {integrity: sha512-j8Wyut1MqCENCBwqfgROkztHY60mTETv90Aw5axCYdPUCM3aHB/G9AzIimwitVnapaY2BFjt8CtNH5bvtummYQ==}
+    cpu: [arm64]
+    os: [darwin]
 
   '@audio/speaker-darwin-x64@2.0.4':
     resolution: {integrity: sha512-AvZEAy5DhLhGRdwCn/aaqDkONWmNXt4GOsetxzml8lmD518+d9VwHRKKUgWFPJ8o2g0kKGr7MC+XnUMN97RvOg==}
@@ -108,19 +140,6 @@ packages:
     cpu: [x64]
     os: [win32]
 
-  '@audio/wav-decode@1.0.0':
-    resolution: {integrity: sha512-yscdQDWWUg88ntVqrMP5/GFUW7t/s3W9q1s2m37lL5ZOSHHoS9XK3VfTWtuW6yKRlIVF8xteGH9DHBzpmegT3A==}
-
-  '@audio/webm-decode@1.0.0':
-    resolution: {integrity: sha512-gie0sXNwbi7H5zVfdeKmAsARIqesXC9iVuPY77tkHA+iemOEbs+Q+pnYK/38YaDPNhByPdP47Ao90FHLlMJ6xg==}
-    engines: {node: '>=16'}
-    deprecated: Package no longer supported. Contact Support at https://www.npmjs.com/support for more info.
-
-  '@audio/wma-decode@1.0.0':
-    resolution: {integrity: sha512-zfJ86djM8QD2wK3coNgiS9cknPCk83E77cS1iNizYx04hsBGSmQ6WMRi3kTIqC04y2ggXlfCzW4CLw1whOEZKg==}
-    engines: {node: '>=16'}
-    deprecated: Package no longer supported. Contact Support at https://www.npmjs.com/support for more info.
-
   '@babel/helper-string-parser@7.27.1':
     resolution: {integrity: sha512-qMlSxKbpRlAridDExk92nSobyDdpPijUq2DW6oDnUqd0iOGxmQjyqhMIihI9+zv4LPyZdRje2cavWPbCbWm3eA==}
     engines: {node: '>=6.9.0'}
@@ -134,8 +153,8 @@ packages:
     engines: {node: '>=6.0.0'}
     hasBin: true
 
-  '@babel/runtime@7.29.2':
-    resolution: {integrity: sha512-JiDShH45zKHWyGe4ZNVRrCjBz8Nh9TMmZG1kh4QTK8hCBTWBi8Da+i7s1fJw7/lYpM4ccepSNfqzZ/QvABBi5g==}
+  '@babel/runtime@7.29.7':
+    resolution: {integrity: sha512-Nq8OhGWiZIZGV6hLHoyAKLLcJihP/xFeBMGJoUrxTX2psI8dCifzLhZISFb+VWS3wFMRDmCGw5R+dOySCqPLhw==}
     engines: {node: '>=6.9.0'}
 
   '@babel/types@7.29.0':
@@ -171,8 +190,11 @@ packages:
   '@jridgewell/trace-mapping@0.3.31':
     resolution: {integrity: sha512-zzNR+SdQSDJzc8joaeP8QQoCQr8NuYx2dIIytl1QeBEZHJ9uW6hebsrYgbz8hJwUQao3TWCMtmfV8Nu1twOLAw==}
 
-  '@napi-rs/wasm-runtime@1.1.1':
-    resolution: {integrity: sha512-p64ah1M1ld8xjWv3qbvFwHiFVWrq1yFvV4f7w+mzaqiR4IlSgkqhcRdHwsGgomwzBH51sRY4NEowLxnaBjcW/A==}
+  '@napi-rs/wasm-runtime@1.1.6':
+    resolution: {integrity: sha512-ZLv/JdUfkvOy9eCnnBaGfiO+XimbjebAeO+MRQqD/B+FR1tnRN0tpKSJHRbE8sFfS6aqsXZ67TQjfwfsxULVbg==}
+    peerDependencies:
+      '@emnapi/core': ^1.7.1
+      '@emnapi/runtime': ^1.7.1
 
   '@oxc-project/types@0.122.0':
     resolution: {integrity: sha512-oLAl5kBpV4w69UtFZ9xqcmTi+GENWOcPF7FCrczTiBbmC0ibXxCwyvZGbO39rCVEuLGAZM84DH0pUIyyv/YJzA==}
@@ -212,42 +234,36 @@ packages:
     engines: {node: ^20.19.0 || >=22.12.0}
     cpu: [arm64]
     os: [linux]
-    libc: [glibc]
 
   '@rolldown/binding-linux-arm64-musl@1.0.0-rc.12':
     resolution: {integrity: sha512-V6/wZztnBqlx5hJQqNWwFdxIKN0m38p8Jas+VoSfgH54HSj9tKTt1dZvG6JRHcjh6D7TvrJPWFGaY9UBVOaWPw==}
     engines: {node: ^20.19.0 || >=22.12.0}
     cpu: [arm64]
     os: [linux]
-    libc: [musl]
 
   '@rolldown/binding-linux-ppc64-gnu@1.0.0-rc.12':
     resolution: {integrity: sha512-AP3E9BpcUYliZCxa3w5Kwj9OtEVDYK6sVoUzy4vTOJsjPOgdaJZKFmN4oOlX0Wp0RPV2ETfmIra9x1xuayFB7g==}
     engines: {node: ^20.19.0 || >=22.12.0}
     cpu: [ppc64]
     os: [linux]
-    libc: [glibc]
 
   '@rolldown/binding-linux-s390x-gnu@1.0.0-rc.12':
     resolution: {integrity: sha512-nWwpvUSPkoFmZo0kQazZYOrT7J5DGOJ/+QHHzjvNlooDZED8oH82Yg67HvehPPLAg5fUff7TfWFHQS8IV1n3og==}
     engines: {node: ^20.19.0 || >=22.12.0}
     cpu: [s390x]
     os: [linux]
-    libc: [glibc]
 
   '@rolldown/binding-linux-x64-gnu@1.0.0-rc.12':
     resolution: {integrity: sha512-RNrafz5bcwRy+O9e6P8Z/OCAJW/A+qtBczIqVYwTs14pf4iV1/+eKEjdOUta93q2TsT/FI0XYDP3TCky38LMAg==}
     engines: {node: ^20.19.0 || >=22.12.0}
     cpu: [x64]
     os: [linux]
-    libc: [glibc]
 
   '@rolldown/binding-linux-x64-musl@1.0.0-rc.12':
     resolution: {integrity: sha512-Jpw/0iwoKWx3LJ2rc1yjFrj+T7iHZn2JDg1Yny1ma0luviFS4mhAIcd1LFNxK3EYu3DHWCps0ydXQ5i/rrJ2ig==}
     engines: {node: ^20.19.0 || >=22.12.0}
     cpu: [x64]
     os: [linux]
-    libc: [musl]
 
   '@rolldown/binding-openharmony-arm64@1.0.0-rc.12':
     resolution: {integrity: sha512-vRugONE4yMfVn0+7lUKdKvN4D5YusEiPilaoO2sgUWpCvrncvWgPMzK00ZFFJuiPgLwgFNP5eSiUlv2tfc+lpA==}
@@ -287,16 +303,16 @@ packages:
   '@standard-schema/spec@1.1.0':
     resolution: {integrity: sha512-l2aFy5jALhniG5HgqrD6jXLi/rUWrKvqN/qJx6yoJsgKhblVd+iqqU4RCXavm/jPityDo5TCvKMnpjKnOriy0w==}
 
-  '@thi.ng/bitstream@2.4.44':
-    resolution: {integrity: sha512-SN5GtdycUC8J9kRn4+GAcAJ93F9vKtaiI/SjpOyLl911bWNlF8gANFFCdgBkzbF2DHcpKflHxrVVfrYB6aCdsw==}
+  '@thi.ng/bitstream@2.4.53':
+    resolution: {integrity: sha512-nhSs378SbSVrHNGb2mRDMVeHn+j2Ss78lK4+G/8IYAVBh461sBcSpj80FkBhDyTAr/yAa53ZFlyrKjkj7Volvw==}
     engines: {node: '>=18'}
 
-  '@thi.ng/errors@2.6.6':
-    resolution: {integrity: sha512-da0slIGmueCf4T0b+xT4TMVUQjHGFTJpul5TAVvPUl7Xn5Noe13Uq6Ag4D5ZCcDwwe2iJ8iHaTuYSJaFZ9f8Mg==}
+  '@thi.ng/errors@2.6.15':
+    resolution: {integrity: sha512-kkd42XRB+D1PVI9IRyEVK/URF0fgTE7SscoehHyuuZ6UHn/4N60ODiTwOONJHRHxLQVQLJ7EwM0t6AuxBufRUA==}
     engines: {node: '>=18'}
 
-  '@tybys/wasm-util@0.10.1':
-    resolution: {integrity: sha512-9tTaPJLSiejZKx+Bmog4uSubteqTvFrVrURwkmHixBo0G4seD0zUxp98E1DzUBJxLQ3NPwXrGKDiVjwx/DpPsg==}
+  '@tybys/wasm-util@0.10.3':
+    resolution: {integrity: sha512-F3fo1MYrRJYL3zER0OUOmkutjr1Vp23m7OsSgp7nq4SP6OqX6C/56XFIPAl5bt3zaBRjmW7SGz3u/6LwFpYcOg==}
 
   '@types/chai@5.2.3':
     resolution: {integrity: sha512-Mw558oeA9fFbv65/y4mHtXDs9bPnFMZAL/jxdPFUpOHHIXX91mcgEHbS5Lahr+pwZFR8A7GQleRWeI6cGFC2UA==}
@@ -382,22 +398,25 @@ packages:
   ast-v8-to-istanbul@1.0.0:
     resolution: {integrity: sha512-1fSfIwuDICFA4LKkCzRPO7F0hzFf0B7+Xqrl27ynQaa+Rh0e1Es0v6kWHPott3lU10AyAr7oKHa65OppjLn3Rg==}
 
-  audio-buffer@6.0.1:
-    resolution: {integrity: sha512-iixroTdkk5AKCBEzCFY1QwhhviRGRpDF5ARVxZpmBn4ubPEiDpHLOubL04Lk9EwJJD6FUFrsCYHomlIMuyUgcA==}
+  audio-buffer@7.3.1:
+    resolution: {integrity: sha512-WXYfZb6hHPGFZnz+NJBs0Gt+gYA8xN5TS9yrk7o9TJEHdO9nsN0z0pQ+6uGYQQGW7AQjNgJukf9J7n3F4ARTqw==}
 
-  audio-decode@3.5.0:
-    resolution: {integrity: sha512-G9McWH9V4ONGuEKKp4QQWDgZpMGu+mcmZ5wDPTTjgIkse7SObPdngyq7E/8IC49VRUloYqP3nW198tR7ndw2Cg==}
+  audio-decode@3.11.0:
+    resolution: {integrity: sha512-eMT4IVOLzXeTErlat8NMKQJgJXUX1qCyCyaAFR3wX7TvX0LsDIvTfINY8pceDfPUxT6KP9mXRAu1yaVAy/yU0g==}
 
-  audio-speaker@2.1.0:
-    resolution: {integrity: sha512-XaDpqg2ntBBYcHh5qzvOV6SmRi+blX9pg7sUPBFHJD28TkV13wULqXeuOlNY0dqddSk34whk9llgy1jI2Splfg==}
+  audio-effect@1.0.1:
+    resolution: {integrity: sha512-qaL/0T3w+VL3oqK4fY6hQj7JsvwKM1dxYh4uvUPSl3bZCXtA/5u0xc4N/ySKHC42Aa+M/nganTz2IzKFJV0p+g==}
+
+  audio-speaker@2.3.1:
+    resolution: {integrity: sha512-l5FXrKBu1UC6p0FxRFejBwxkDOFLeUbtQMe9kRGXERLkNr+Id3USShTldESHzGQbT1eAF/JWMzdVWHxry22TXA==}
     engines: {node: '>=18'}
 
-  audio-type@2.4.0:
-    resolution: {integrity: sha512-ugYMgxLpH6gyWUhFWFl2HCJboFL5z/GoqSdonx8ZycfNP8JDHBhRNzYWzrCRa/6htOWfvJAq7qpRloxvx06sRA==}
+  audio-type@2.4.1:
+    resolution: {integrity: sha512-dK9Z/P83C/rBfTrXXgPD3jZ+aXxx2o/P4rq8+H1JqxbXklitEeJw4CrcwMC5CkON3CX3yy2gaWnIEVYejYh0zQ==}
     engines: {node: '>=14'}
 
-  automation-events@7.1.16:
-    resolution: {integrity: sha512-vAAHG8WO+Cx2PfwmWIAxSD51ZYg+zRam52pzOGVAJOqsqQO6oaPM2k4/cdEF7QQ786FYB8Wzbw//qTWCdyGvzA==}
+  automation-events@7.1.19:
+    resolution: {integrity: sha512-cD+TLhJTI0q4AI3ktd353lrGZiVa9AchowSDzQzzGjSoYe22js4vlS32VUtWuaulghi1Yq0KYNWKk9wWuGymPA==}
     engines: {node: '>=18.2.0'}
 
   balanced-match@1.0.2:
@@ -419,6 +438,10 @@ packages:
   detect-libc@2.1.2:
     resolution: {integrity: sha512-Btj2BOOO83o3WyH59e8MgXsxEQVcarkUOpEYrubB0urwnN10yQ364rsiByU11nZlqWYZm05i/of7io4mzihBtQ==}
     engines: {node: '>=8'}
+
+  digital-filter@2.3.1:
+    resolution: {integrity: sha512-KzcWuhDLTt2lKFF4KZCrHSPOqHBTH+CxZwWDO0coqNTKiYyxgIwoTAuIQj1F8nFgwnCKomgwOXU62YCfsYVshg==}
+    engines: {node: '>=18'}
 
   entities@4.5.0:
     resolution: {integrity: sha512-V0hjH4dGPh9Ao5p0MoRY6BVqtwCjhz6vI5LT8AJ55H+4g9/4vbHx1I54fS0XuclLhDHArPQCiMjDxjaL8fPxhw==}
@@ -443,8 +466,8 @@ packages:
       picomatch:
         optional: true
 
-  fourier-transform@2.2.0:
-    resolution: {integrity: sha512-IMFCIoZycT+8btxocpqAfVBpLtfLgQ/Y0w8KvX4iPT8C2Y+aAXz49kK4Gvaogfqz0lZiBpwAk2z10Grfyg5Buw==}
+  fourier-transform@2.3.0:
+    resolution: {integrity: sha512-+Ki9tVP1a/1R3svMxeAFOr2FEQhjFdB9szYh2I8IEAUzSUbkV5K/e4hcPVNSjonUllImheK0O/Hoy/VPby6Iig==}
 
   fsevents@2.3.2:
     resolution: {integrity: sha512-xiqMQR4xAeHTuB9uWm+fFRcIOgKBMiOBP+eXiyT7jsgVCq1bkVygt00oASowB7EdtpOHaaPgKt812P9ab+DDKA==}
@@ -513,28 +536,24 @@ packages:
     engines: {node: '>= 12.0.0'}
     cpu: [arm64]
     os: [linux]
-    libc: [glibc]
 
   lightningcss-linux-arm64-musl@1.32.0:
     resolution: {integrity: sha512-UpQkoenr4UJEzgVIYpI80lDFvRmPVg6oqboNHfoH4CQIfNA+HOrZ7Mo7KZP02dC6LjghPQJeBsvXhJod/wnIBg==}
     engines: {node: '>= 12.0.0'}
     cpu: [arm64]
     os: [linux]
-    libc: [musl]
 
   lightningcss-linux-x64-gnu@1.32.0:
     resolution: {integrity: sha512-V7Qr52IhZmdKPVr+Vtw8o+WLsQJYCTd8loIfpDaMRWGUZfBOYEJeyJIkqGIDMZPwPx24pUMfwSxxI8phr/MbOA==}
     engines: {node: '>= 12.0.0'}
     cpu: [x64]
     os: [linux]
-    libc: [glibc]
 
   lightningcss-linux-x64-musl@1.32.0:
     resolution: {integrity: sha512-bYcLp+Vb0awsiXg/80uCRezCYHNg1/l3mt0gzHnWV9XP1W5sKa5/TCdGWaR/zBM2PeF/HbsQv/j2URNOiVuxWg==}
     engines: {node: '>= 12.0.0'}
     cpu: [x64]
     os: [linux]
-    libc: [musl]
 
   lightningcss-win32-arm64-msvc@1.32.0:
     resolution: {integrity: sha512-8SbC8BR40pS6baCM8sbtYDSwEVQd4JlFTOlaD3gWGHfThTcABnNDBda6eTZeqbofalIJhFx0qKzgHJmcPTnGdw==}
@@ -582,8 +601,8 @@ packages:
   mpg123-decoder@1.0.3:
     resolution: {integrity: sha512-+fjxnWigodWJm3+4pndi+KUg9TBojgn31DPk85zEsim7C6s0X5Ztc/hQYdytXkwuGXH+aB0/aEkG40Emukv6oQ==}
 
-  nanoid@3.3.11:
-    resolution: {integrity: sha512-N8SpfPUnUp1bK+PMYW8qSWdl9U+wwNWI4QKxOYDy9JAro3WMX7p2OeVRF9v+347pnakNevPmiHhNmZ2HbFA76w==}
+  nanoid@3.3.15:
+    resolution: {integrity: sha512-y7Wygv/7mEOvxTuEQDB8StXdMRBWf1kR/tlhAzBRUFkB2jfcLOAxO/SHmOO2zgz1pVgK29/kyupn059/bCHdjA==}
     engines: {node: ^10 || ^12 || ^13.7 || ^14 || >=15.0.1}
     hasBin: true
 
@@ -598,6 +617,12 @@ packages:
 
   pathe@2.0.3:
     resolution: {integrity: sha512-WUjGcAqP1gQacoQe+OBJsFA7Ld4DyXuUIjZ5cc75cLHvJ7dtNsTugphxIADwspS+AraAUePCKrSVtPLFj/F88w==}
+
+  pcm-convert@3.1.1:
+    resolution: {integrity: sha512-nlpgtFCUXR08NXdDiXCV6yCHQy4WTDF8t5v5unnTTHB/F7Px+h0t8AdkhS9gtHau72V9VpEiCx7FbyOX6PcSow==}
+
+  periodic-function@2.1.0:
+    resolution: {integrity: sha512-hUuKIlMwYIPZiao76mWRw25/nGkB6kBjgVeBdAqLFWZh0u7KaZpEyPn5VGFsId4U6Ytu5+1WQUNp+OsHdgKFBg==}
 
   picocolors@1.1.1:
     resolution: {integrity: sha512-xceH2snhtb5M9liqDsmEw56le376mTZkEX/jEb/RxNFyegNul7eNslCXP9FDj/Lcu0X8KEyMceP2ntpaHrDEVA==}
@@ -616,8 +641,8 @@ packages:
     engines: {node: '>=18'}
     hasBin: true
 
-  postcss@8.5.8:
-    resolution: {integrity: sha512-OW/rX8O/jXnm82Ey1k44pObPtdblfiuWnrd8X7GJ7emImCOstunGbXUpp7HdBrFQX6rJzn3sPT397Wp5aCwCHg==}
+  postcss@8.5.16:
+    resolution: {integrity: sha512-vuwillviilfKZsg0VGj5R/YwwcHx4SLsIOI/7K6mQkWx+l5cUHTjj5g0AasTBcyXsbfTgrwsUNmVUb5xVwyPwg==}
     engines: {node: ^10 || ^12 || >=14}
 
   prettier@3.8.1:
@@ -671,6 +696,10 @@ packages:
 
   tinyglobby@0.2.15:
     resolution: {integrity: sha512-j2Zq4NyQYG5XMST4cbs02Ak8iJUdxRM0XI5QyxXuZOzKOINmWurp3smXu3y5wDcJrptwpSjgXHzIQxR0omXljQ==}
+    engines: {node: '>=12.0.0'}
+
+  tinyglobby@0.2.17:
+    resolution: {integrity: sha512-wXR/dYpcqKmfWpEdZjiKJOwCNFndD0DMnrW/cYjVGttEkBfVgcLFHoNrlj47mjOVic9yyNu65alsgF4NQyTa2g==}
     engines: {node: '>=12.0.0'}
 
   tinyrainbow@3.1.0:
@@ -776,9 +805,14 @@ packages:
       jsdom:
         optional: true
 
-  web-audio-api@1.2.0:
-    resolution: {integrity: sha512-DKfBfiNUTqjOmAmtZ0dHXsAcANsHZVauALdIf1+TcZBtyKFB+Llp1RyD1vxCrWEUtEjnjwncrVA/tc17LXSODQ==}
+  web-audio-api@1.5.1:
+    resolution: {integrity: sha512-RXD/ul9xnMfDFI2nf48ykuONDOLJXNXIgrxFUbUdBFwpvleSWH3vz/6c76SDKxMghZ+OwIOFYXjU36s+coxAxg==}
     engines: {node: '>=18'}
+    peerDependencies:
+      audio-mic: '*'
+    peerDependenciesMeta:
+      audio-mic:
+        optional: true
 
   why-is-node-running@2.3.0:
     resolution: {integrity: sha512-hUrmaWBdVDcxvYqnyh09zunKzROWjbZTiNy8dBEjkS7ehEDQibXJ7XvlmtbwuTclUiIyN+CyXQD4Vmko8fNm8w==}
@@ -792,13 +826,45 @@ packages:
 
 snapshots:
 
-  '@audio/aac-decode@1.0.2': {}
+  '@audio/decode-aac@1.2.0': {}
 
-  '@audio/aiff-decode@1.0.0': {}
+  '@audio/decode-aiff@1.1.3': {}
 
-  '@audio/amr-decode@1.0.0': {}
+  '@audio/decode-amr@1.1.1': {}
 
-  '@audio/caf-decode@1.0.0': {}
+  '@audio/decode-caf@1.2.0': {}
+
+  '@audio/decode-flac@1.1.0':
+    dependencies:
+      '@wasm-audio-decoders/flac': 0.2.10
+
+  '@audio/decode-mp3@1.1.0':
+    dependencies:
+      mpg123-decoder: 1.0.3
+
+  '@audio/decode-opus@1.1.1':
+    dependencies:
+      ogg-opus-decoder: 1.7.3
+
+  '@audio/decode-qoa@1.0.0':
+    dependencies:
+      qoa-format: 1.0.1
+
+  '@audio/decode-vorbis@1.1.1':
+    dependencies:
+      '@wasm-audio-decoders/ogg-vorbis': 0.1.20
+
+  '@audio/decode-wav@1.3.0': {}
+
+  '@audio/decode-webm@1.2.1':
+    dependencies:
+      '@wasm-audio-decoders/ogg-vorbis': 0.1.20
+      opus-decoder: 0.7.11
+
+  '@audio/decode-wma@1.1.2': {}
+
+  '@audio/speaker-darwin-arm64@2.0.4':
+    optional: true
 
   '@audio/speaker-darwin-x64@2.0.4':
     optional: true
@@ -812,15 +878,6 @@ snapshots:
   '@audio/speaker-win32-x64@2.0.4':
     optional: true
 
-  '@audio/wav-decode@1.0.0': {}
-
-  '@audio/webm-decode@1.0.0':
-    dependencies:
-      '@wasm-audio-decoders/ogg-vorbis': 0.1.20
-      opus-decoder: 0.7.11
-
-  '@audio/wma-decode@1.0.0': {}
-
   '@babel/helper-string-parser@7.27.1': {}
 
   '@babel/helper-validator-identifier@7.28.5': {}
@@ -829,7 +886,7 @@ snapshots:
     dependencies:
       '@babel/types': 7.29.0
 
-  '@babel/runtime@7.29.2': {}
+  '@babel/runtime@7.29.7': {}
 
   '@babel/types@7.29.0':
     dependencies:
@@ -871,11 +928,11 @@ snapshots:
       '@jridgewell/resolve-uri': 3.1.2
       '@jridgewell/sourcemap-codec': 1.5.5
 
-  '@napi-rs/wasm-runtime@1.1.1':
+  '@napi-rs/wasm-runtime@1.1.6(@emnapi/core@1.9.1)(@emnapi/runtime@1.9.1)':
     dependencies:
       '@emnapi/core': 1.9.1
       '@emnapi/runtime': 1.9.1
-      '@tybys/wasm-util': 0.10.1
+      '@tybys/wasm-util': 0.10.3
     optional: true
 
   '@oxc-project/types@0.122.0': {}
@@ -916,9 +973,12 @@ snapshots:
   '@rolldown/binding-openharmony-arm64@1.0.0-rc.12':
     optional: true
 
-  '@rolldown/binding-wasm32-wasi@1.0.0-rc.12':
+  '@rolldown/binding-wasm32-wasi@1.0.0-rc.12(@emnapi/core@1.9.1)(@emnapi/runtime@1.9.1)':
     dependencies:
-      '@napi-rs/wasm-runtime': 1.1.1
+      '@napi-rs/wasm-runtime': 1.1.6(@emnapi/core@1.9.1)(@emnapi/runtime@1.9.1)
+    transitivePeerDependencies:
+      - '@emnapi/core'
+      - '@emnapi/runtime'
     optional: true
 
   '@rolldown/binding-win32-arm64-msvc@1.0.0-rc.12':
@@ -943,13 +1003,13 @@ snapshots:
 
   '@standard-schema/spec@1.1.0': {}
 
-  '@thi.ng/bitstream@2.4.44':
+  '@thi.ng/bitstream@2.4.53':
     dependencies:
-      '@thi.ng/errors': 2.6.6
+      '@thi.ng/errors': 2.6.15
 
-  '@thi.ng/errors@2.6.6': {}
+  '@thi.ng/errors@2.6.15': {}
 
-  '@tybys/wasm-util@0.10.1':
+  '@tybys/wasm-util@0.10.3':
     dependencies:
       tslib: 2.8.1
     optional: true
@@ -973,7 +1033,7 @@ snapshots:
 
   '@types/unist@3.0.3': {}
 
-  '@vitest/coverage-v8@4.1.4(vitest@4.1.2(@types/node@25.5.0)(vite@8.0.3(@types/node@25.5.0)(yaml@2.8.3)))':
+  '@vitest/coverage-v8@4.1.4(vitest@4.1.2(@types/node@25.5.0)(vite@8.0.3(@emnapi/core@1.9.1)(@emnapi/runtime@1.9.1)(@types/node@25.5.0)(yaml@2.8.3)))':
     dependencies:
       '@bcoe/v8-coverage': 1.0.2
       '@vitest/utils': 4.1.4
@@ -985,7 +1045,7 @@ snapshots:
       obug: 2.1.1
       std-env: 4.0.0
       tinyrainbow: 3.1.0
-      vitest: 4.1.2(@types/node@25.5.0)(vite@8.0.3(@types/node@25.5.0)(yaml@2.8.3))
+      vitest: 4.1.2(@types/node@25.5.0)(vite@8.0.3(@emnapi/core@1.9.1)(@emnapi/runtime@1.9.1)(@types/node@25.5.0)(yaml@2.8.3))
 
   '@vitest/expect@4.1.2':
     dependencies:
@@ -996,13 +1056,13 @@ snapshots:
       chai: 6.2.2
       tinyrainbow: 3.1.0
 
-  '@vitest/mocker@4.1.2(vite@8.0.3(@types/node@25.5.0)(yaml@2.8.3))':
+  '@vitest/mocker@4.1.2(vite@8.0.3(@emnapi/core@1.9.1)(@emnapi/runtime@1.9.1)(@types/node@25.5.0)(yaml@2.8.3))':
     dependencies:
       '@vitest/spy': 4.1.2
       estree-walker: 3.0.3
       magic-string: 0.30.21
     optionalDependencies:
-      vite: 8.0.3(@types/node@25.5.0)(yaml@2.8.3)
+      vite: 8.0.3(@emnapi/core@1.9.1)(@emnapi/runtime@1.9.1)(@types/node@25.5.0)(yaml@2.8.3)
 
   '@vitest/pretty-format@4.1.2':
     dependencies:
@@ -1067,36 +1127,39 @@ snapshots:
       estree-walker: 3.0.3
       js-tokens: 10.0.0
 
-  audio-buffer@6.0.1: {}
+  audio-buffer@7.3.1: {}
 
-  audio-decode@3.5.0:
+  audio-decode@3.11.0:
     dependencies:
-      '@audio/aac-decode': 1.0.2
-      '@audio/aiff-decode': 1.0.0
-      '@audio/amr-decode': 1.0.0
-      '@audio/caf-decode': 1.0.0
-      '@audio/wav-decode': 1.0.0
-      '@audio/webm-decode': 1.0.0
-      '@audio/wma-decode': 1.0.0
-      '@wasm-audio-decoders/flac': 0.2.10
-      '@wasm-audio-decoders/ogg-vorbis': 0.1.20
-      audio-type: 2.4.0
-      mpg123-decoder: 1.0.3
-      ogg-opus-decoder: 1.7.3
-      qoa-format: 1.0.1
+      '@audio/decode-aac': 1.2.0
+      '@audio/decode-aiff': 1.1.3
+      '@audio/decode-amr': 1.1.1
+      '@audio/decode-caf': 1.2.0
+      '@audio/decode-flac': 1.1.0
+      '@audio/decode-mp3': 1.1.0
+      '@audio/decode-opus': 1.1.1
+      '@audio/decode-qoa': 1.0.0
+      '@audio/decode-vorbis': 1.1.1
+      '@audio/decode-wav': 1.3.0
+      '@audio/decode-webm': 1.2.1
+      '@audio/decode-wma': 1.1.2
+      audio-type: 2.4.1
 
-  audio-speaker@2.1.0:
+  audio-effect@1.0.1: {}
+
+  audio-speaker@2.3.1:
     optionalDependencies:
+      '@audio/speaker-darwin-arm64': 2.0.4
       '@audio/speaker-darwin-x64': 2.0.4
       '@audio/speaker-linux-arm64': 2.0.4
       '@audio/speaker-linux-x64': 2.0.4
       '@audio/speaker-win32-x64': 2.0.4
 
-  audio-type@2.4.0: {}
+  audio-type@2.4.1: {}
 
-  automation-events@7.1.16:
+  automation-events@7.1.19:
     dependencies:
-      '@babel/runtime': 7.29.2
+      '@babel/runtime': 7.29.7
       tslib: 2.8.1
 
   balanced-match@1.0.2: {}
@@ -1113,6 +1176,8 @@ snapshots:
 
   detect-libc@2.1.2: {}
 
+  digital-filter@2.3.1: {}
+
   entities@4.5.0: {}
 
   es-module-lexer@2.0.0: {}
@@ -1127,7 +1192,7 @@ snapshots:
     optionalDependencies:
       picomatch: 4.0.4
 
-  fourier-transform@2.2.0: {}
+  fourier-transform@2.3.0: {}
 
   fsevents@2.3.2:
     optional: true
@@ -1242,7 +1307,7 @@ snapshots:
     dependencies:
       '@wasm-audio-decoders/common': 9.0.7
 
-  nanoid@3.3.11: {}
+  nanoid@3.3.15: {}
 
   obug@2.1.1: {}
 
@@ -1259,6 +1324,10 @@ snapshots:
 
   pathe@2.0.3: {}
 
+  pcm-convert@3.1.1: {}
+
+  periodic-function@2.1.0: {}
+
   picocolors@1.1.1: {}
 
   picomatch@4.0.4: {}
@@ -1271,9 +1340,9 @@ snapshots:
     optionalDependencies:
       fsevents: 2.3.2
 
-  postcss@8.5.8:
+  postcss@8.5.16:
     dependencies:
-      nanoid: 3.3.11
+      nanoid: 3.3.15
       picocolors: 1.1.1
       source-map-js: 1.2.1
 
@@ -1283,9 +1352,9 @@ snapshots:
 
   qoa-format@1.0.1:
     dependencies:
-      '@thi.ng/bitstream': 2.4.44
+      '@thi.ng/bitstream': 2.4.53
 
-  rolldown@1.0.0-rc.12:
+  rolldown@1.0.0-rc.12(@emnapi/core@1.9.1)(@emnapi/runtime@1.9.1):
     dependencies:
       '@oxc-project/types': 0.122.0
       '@rolldown/pluginutils': 1.0.0-rc.12
@@ -1302,9 +1371,12 @@ snapshots:
       '@rolldown/binding-linux-x64-gnu': 1.0.0-rc.12
       '@rolldown/binding-linux-x64-musl': 1.0.0-rc.12
       '@rolldown/binding-openharmony-arm64': 1.0.0-rc.12
-      '@rolldown/binding-wasm32-wasi': 1.0.0-rc.12
+      '@rolldown/binding-wasm32-wasi': 1.0.0-rc.12(@emnapi/core@1.9.1)(@emnapi/runtime@1.9.1)
       '@rolldown/binding-win32-arm64-msvc': 1.0.0-rc.12
       '@rolldown/binding-win32-x64-msvc': 1.0.0-rc.12
+    transitivePeerDependencies:
+      - '@emnapi/core'
+      - '@emnapi/runtime'
 
   semver@7.7.4: {}
 
@@ -1331,6 +1403,11 @@ snapshots:
       fdir: 6.5.0(picomatch@4.0.4)
       picomatch: 4.0.4
 
+  tinyglobby@0.2.17:
+    dependencies:
+      fdir: 6.5.0(picomatch@4.0.4)
+      picomatch: 4.0.4
+
   tinyrainbow@3.1.0: {}
 
   tslib@2.8.1: {}
@@ -1350,22 +1427,25 @@ snapshots:
 
   undici-types@7.18.2: {}
 
-  vite@8.0.3(@types/node@25.5.0)(yaml@2.8.3):
+  vite@8.0.3(@emnapi/core@1.9.1)(@emnapi/runtime@1.9.1)(@types/node@25.5.0)(yaml@2.8.3):
     dependencies:
       lightningcss: 1.32.0
       picomatch: 4.0.4
-      postcss: 8.5.8
-      rolldown: 1.0.0-rc.12
-      tinyglobby: 0.2.15
+      postcss: 8.5.16
+      rolldown: 1.0.0-rc.12(@emnapi/core@1.9.1)(@emnapi/runtime@1.9.1)
+      tinyglobby: 0.2.17
     optionalDependencies:
       '@types/node': 25.5.0
       fsevents: 2.3.3
       yaml: 2.8.3
+    transitivePeerDependencies:
+      - '@emnapi/core'
+      - '@emnapi/runtime'
 
-  vitest@4.1.2(@types/node@25.5.0)(vite@8.0.3(@types/node@25.5.0)(yaml@2.8.3)):
+  vitest@4.1.2(@types/node@25.5.0)(vite@8.0.3(@emnapi/core@1.9.1)(@emnapi/runtime@1.9.1)(@types/node@25.5.0)(yaml@2.8.3)):
     dependencies:
       '@vitest/expect': 4.1.2
-      '@vitest/mocker': 4.1.2(vite@8.0.3(@types/node@25.5.0)(yaml@2.8.3))
+      '@vitest/mocker': 4.1.2(vite@8.0.3(@emnapi/core@1.9.1)(@emnapi/runtime@1.9.1)(@types/node@25.5.0)(yaml@2.8.3))
       '@vitest/pretty-format': 4.1.2
       '@vitest/runner': 4.1.2
       '@vitest/snapshot': 4.1.2
@@ -1382,20 +1462,24 @@ snapshots:
       tinyexec: 1.0.4
       tinyglobby: 0.2.15
       tinyrainbow: 3.1.0
-      vite: 8.0.3(@types/node@25.5.0)(yaml@2.8.3)
+      vite: 8.0.3(@emnapi/core@1.9.1)(@emnapi/runtime@1.9.1)(@types/node@25.5.0)(yaml@2.8.3)
       why-is-node-running: 2.3.0
     optionalDependencies:
       '@types/node': 25.5.0
     transitivePeerDependencies:
       - msw
 
-  web-audio-api@1.2.0:
+  web-audio-api@1.5.1:
     dependencies:
-      audio-buffer: 6.0.1
-      audio-decode: 3.5.0
-      audio-speaker: 2.1.0
-      automation-events: 7.1.16
-      fourier-transform: 2.2.0
+      audio-buffer: 7.3.1
+      audio-decode: 3.11.0
+      audio-effect: 1.0.1
+      audio-speaker: 2.3.1
+      automation-events: 7.1.19
+      digital-filter: 2.3.1
+      fourier-transform: 2.3.0
+      pcm-convert: 3.1.1
+      periodic-function: 2.1.0
 
   why-is-node-running@2.3.0:
     dependencies:

@@ -7,7 +7,7 @@ import shutil
 import tempfile
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import Any, Dict, List, Optional
 
 import numpy as np
 import soundfile as sf
@@ -412,6 +412,22 @@ _EFFECTS_PRESETS: dict[str, dict] = {
 
 
 @dataclass
+class EffectConfig:
+    """Configuration for a single effect in the effects chain.
+
+    Used when the default preset-based pipeline is insufficient and an
+    explicit chain of effects with per-effect parameters is desired.
+
+    Attributes:
+        type: Effect type name, e.g. "saturation", "delay", "reverb",
+              "compression", "stereo_widener", "granular_delay", "lfo".
+        params: Dictionary of effect-specific parameters (varies by type).
+    """
+    type: str = "saturation"
+    params: Dict[str, Any] = field(default_factory=dict)
+
+
+@dataclass
 class MixConfig:
     """Configuration for a dub techno mix generation session."""
 
@@ -436,6 +452,7 @@ class MixConfig:
     pattern_style: str = "dub_techno"
     pattern_library_path: str = ""
     inference_steps_range: tuple[int, int] | None = None  # e.g., (8, 50)
+    effects_chain: List[EffectConfig] = field(default_factory=list)
 
     def _inference_steps_for_segment(self, index: int, total: int) -> int | None:
         if self.inference_steps_range is None:

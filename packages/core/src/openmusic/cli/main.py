@@ -3,12 +3,12 @@ import json
 import os
 import subprocess
 from pathlib import Path
-from typing import Optional
+from typing import Any, Dict, List, Optional
 
 import click
 import yaml
 
-from openmusic.orchestrator.mix import MixConfig, MixOrchestrator
+from openmusic.orchestrator.mix import EffectConfig, MixConfig, MixOrchestrator
 from openmusic.orchestrator.progress import ProgressReporter
 from openmusic.export.youtube_uploader import (
     YouTubeUploader,
@@ -58,8 +58,10 @@ def _build_config_from_flags(
     model: str = "ace-step",
     model_preset: str = "sft",
     use_bayesian_markov: bool = True,
+    effects_chain: Optional[List[Dict[str, Any]]] = None,
 ) -> MixConfig:
     seconds = _parse_length_to_seconds(length)
+    chain = effects_chain or []
     return MixConfig(
         model_preset=model_preset,
         length=float(seconds),
@@ -72,6 +74,7 @@ def _build_config_from_flags(
         cover_theme=cover_theme,
         model=model,
         use_bayesian_markov=use_bayesian_markov,
+        effects_chain=[EffectConfig(**e) for e in chain],
     )
 
 
@@ -161,6 +164,7 @@ def generate(
     containing the configuration.
     """
     try:
+        chain = None
         if config:
             with open(config, "r") as f:
                 cfg = yaml.safe_load(f) or {}
@@ -169,6 +173,7 @@ def generate(
             bpm = int(cfg.get("bpm", bpm))
             key = str(cfg.get("key", key))
             output = str(cfg.get("output_path", cfg.get("output", output)))
+            chain = cfg.get("effects_chain")
 
         # If cover_image is provided, skip auto-generation
         generate_cover_flag = cover and not cover_image
@@ -185,6 +190,7 @@ def generate(
             model=model,
             model_preset=model_preset,
             use_bayesian_markov=not no_bayesian_markov,
+            effects_chain=chain,
         )
         # Use a progress reporter as a lightweight progress indicator
         total_segments = max(

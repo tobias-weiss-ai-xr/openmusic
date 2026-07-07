@@ -9,6 +9,7 @@ from .saturation import TapeSaturation
 from .stereo import MidSideStereoWidener
 from .lfo import LFOModulationEngine
 from .parameter_automation import ParameterAutomation
+from .spectral import SpectralGate
 
 # Native Python DSP effects using Spotify Pedalboard
 # Import lazily to avoid breaking tests when modules not yet created
@@ -21,6 +22,7 @@ __all__ = [
     "MidSideStereoWidener",
     "LFOModulationEngine",
     "ParameterAutomation",
+    "SpectralGate",
     "PedalboardEffectsChain",
     "Envelope",
     "LFO",

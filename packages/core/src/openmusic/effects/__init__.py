@@ -9,7 +9,7 @@ from .saturation import TapeSaturation
 from .stereo import MidSideStereoWidener
 from .lfo import LFOModulationEngine
 from .parameter_automation import ParameterAutomation
-from .spectral import SpectralGate
+from .spectral import SpectralGate, SpectralMaskingAvoidance
 
 # Native Python DSP effects using Spotify Pedalboard
 # Import lazily to avoid breaking tests when modules not yet created
@@ -58,8 +58,11 @@ def __getattr__(name: str):
         from openmusic.effects.mastering import MasteringChain as _cls
 
         return _cls
-    if name == "SpectralGate":
-        from openmusic.effects.spectral import SpectralGate as _cls
+    if name in ("SpectralGate", "SpectralMaskingAvoidance"):
+        from openmusic.effects.spectral import (
+            SpectralGate as _G,
+            SpectralMaskingAvoidance as _MA,
+        )
 
-        return _cls
+        return {"SpectralGate": _G, "SpectralMaskingAvoidance": _MA}[name]
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")

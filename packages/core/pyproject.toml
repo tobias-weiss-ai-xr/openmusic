@@ -87,7 +87,7 @@ torchvision = { index = "pytorch-cu128", extra = "acestep" }
 torchaudio = { index = "pytorch-cu128", extra = "acestep" }
 
 [tool.coverage.run]
-omit = ["*/verify_spectral_masking.py", "*/tests/*"]
+omit = ["*/tests/*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

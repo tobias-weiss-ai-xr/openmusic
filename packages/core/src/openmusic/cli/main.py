@@ -1158,7 +1158,7 @@ def auth_youtube(output: str):
 
         CLIENT_ID = os.getenv("YOUTUBE_CLIENT_ID", "")
         CLIENT_SECRET = os.getenv("YOUTUBE_CLIENT_SECRET", "")
-        SCOPES = ["https://www.googleapis.com/auth/youtube.upload"]
+        SCOPES = ["https://www.googleapis.com/auth/youtube"]
         
         # Read from client_secrets.json or environment
         client_secrets_path = None

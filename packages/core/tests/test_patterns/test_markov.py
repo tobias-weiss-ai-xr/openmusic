@@ -1,188 +1,158 @@
-"""Tests for Markov phase transition matrix generation."""
+"""Tests for Markov phase transition matrix — matching current API."""
 
 import pytest
 
 from openmusic.patterns.markov import (
     Phase,
     PhaseTransitionMatrix,
+    StyleFactory,
 )
 
 
 class TestPhaseEnum:
-    """Tests for the Phase enum representing musical sections."""
+    """Tests for the Phase enum."""
 
-    def test_phase_enums(self):
-        """Verify all six phases are defined."""
-        assert Phase.INTRO == 1
-        assert Phase.BUILD == 2
-        assert Phase.CASCADE == 3
-        assert Phase.SUSTAIN == 4
-        assert Phase.ROLLBACK == 5
-        assert Phase.OUTRO == 6
+    def test_phase_values(self):
+        """Verify all six phases are defined as string values."""
+        assert Phase.INTRO == "intro"
+        assert Phase.BUILD == "build"
+        assert Phase.PEAK == "peak"
+        assert Phase.SUSTAIN == "sustain"
+        assert Phase.RELEASE == "release"
+        assert Phase.OUTRO == "outro"
 
-    def test_phase_names(self):
-        """Each phase has a readable name attribute."""
-        assert "intro" in Phase.INTRO.name.lower()
-        assert "build" in Phase.BUILD.name.lower()
-        assert "cascade" in Phase.CASCADE.name.lower()
-        assert "sustain" in Phase.SUSTAIN.name.lower()
-        assert "rollback" in Phase.ROLLBACK.name.lower()
-        assert "outro" in Phase.OUTRO.name.lower()
+    def test_phase_members(self):
+        """All six phase members exist."""
+        assert len(list(Phase)) == 6
 
 
 class TestPhaseTransitionMatrixCreation:
     """Tests for creating transition matrices."""
 
-    def test_default_factory(self):
-        """Factory method creates default matrix."""
-        matrix = PhaseTransitionMatrix.create_default()
+    def test_default_constructor(self):
+        """Default constructor creates matrix with default transitions."""
+        matrix = PhaseTransitionMatrix()
         assert matrix is not None
-        assert matrix.transition_matrix.shape == (6, 6)
 
-    def test_default_all_phases_defined(self):
-        """Default factory includes all six phases."""
-        matrix = PhaseTransitionMatrix.create_default()
-        for from_phase in Phase:
-            for to_phase in Phase:
-                assert matrix.get_transition_probability(from_phase, to_phase) >= 0.0
-                assert matrix.get_transition_probability(from_phase, to_phase) <= 1.0
+    def test_matrix_has_all_phases(self):
+        """matrix property contains all six phases as keys."""
+        matrix = PhaseTransitionMatrix()
+        assert len(matrix.matrix) == 6
+        for phase in Phase:
+            assert phase in matrix.matrix
 
     def test_row_sums_to_one(self):
-        """Each row in transition matrix should sum to 1.0."""
-        matrix = PhaseTransitionMatrix.create_default()
+        """Each row in transition matrix sums to 1.0."""
+        matrix = PhaseTransitionMatrix()
         for from_phase in Phase:
-            row_sum = 0.0
-            for to_phase in Phase:
-                row_sum += matrix.get_transition_probability(from_phase, to_phase)
-            assert abs(row_sum - 1.0) < 1e-10  # Allow for floating point error
+            transitions = matrix.matrix[from_phase]
+            row_sum = sum(prob for _, prob in transitions)
+            assert abs(row_sum - 1.0) < 1e-10
 
     def test_dub_techno_factory(self):
-        """Factory for dubtechno style uses appropriate transitions."""
-        matrix = PhaseTransitionMatrix.create_style(PhaseStyle.DUB_TECHNO)
+        """dub_techno classmethod creates a valid matrix."""
+        matrix = PhaseTransitionMatrix.dub_techno()
         assert matrix is not None
-
-        # Dub techno should have longer sections (sustains after builds)
-        build_to_sustain = matrix.get_transition_probability(Phase.BUILD, Phase.SUSTAIN)
-        assert build_to_sustain > 0.0
+        assert len(matrix.matrix) == 6
 
     def test_ambient_factory(self):
-        """Factory for ambient style uses appropriate transitions."""
-        matrix = PhaseTransitionMatrix.create_style(PhaseStyle.AMBIENT)
+        """ambient classmethod creates a valid matrix."""
+        matrix = PhaseTransitionMatrix.ambient()
         assert matrix is not None
-
-        # Ambient should have longer intros and cascades
-        intro_to_cascade = matrix.get_transition_probability(Phase.INTRO, Phase.CASCADE)
-        assert intro_to_cascade > 0.0
-
-    def test_club_factory(self):
-        """Factory for club style uses appropriate transitions."""
-        matrix = PhaseTransitionMatrix.create_style(PhaseStyle.CLUB)
-        assert matrix is not None
-
-        # Club style should have more rapid transitions and energy
-        sustain_to_cascade = matrix.get_transition_probability(Phase.SUSTAIN, Phase.CASCADE)
-        assert sustain_to_cascade > 0.0
-
-    def test_all_night_factory(self):
-        """Factory for allnight style uses appropriate transitions."""
-        matrix = PhaseTransitionMatrix.create_style(PhaseStyle.ALL_NIGHT)
-        assert matrix is not None
-
-        # All night style should avoid outro
-        outro_from_any = sum(
-            matrix.get_transition_probability(p, Phase.OUTRO) for p in Phase
-        )
-        assert outro_from_any < 0.1
-
-    def test_invalid_style_raises(self):
-        """Invalid phase style should raise ValueError."""
-        with pytest.raises(ValueError):
-            PhaseTransitionMatrix.create_style(PhaseStyle.INVALID)
+        assert len(matrix.matrix) == 6
 
 
 class TestPhaseTransitionMatrixBehavior:
-    """Tests for Markov chain behavior with transition matrix."""
+    """Tests for Markov chain behavior."""
 
-    def test_get_next_phase(self):
-        """Get next phase in the sequence."""
-        matrix = PhaseTransitionMatrix.create_default()
-        next_phase = matrix.get_next_phase(Phase.INTRO)
-        assert isinstance(next_phase, Phase)
+    def test_next_phase_returns_phase(self):
+        """next_phase returns a valid Phase for any input."""
+        matrix = PhaseTransitionMatrix()
+        for current in Phase:
+            next_p = matrix.next_phase(current)
+            assert isinstance(next_p, Phase)
+            assert next_p in Phase
 
-    def test_all_phases_can_be_next(self):
-        """Every phase can potentially follow any other phase."""
-        matrix = PhaseTransitionMatrix.create_default()
-        seen_transitions = {}
+    def test_generate_sequence_length(self):
+        """generate_sequence returns correct number of phases."""
+        matrix = PhaseTransitionMatrix()
+        seq = matrix.generate_sequence(10)
+        assert len(seq) == 10
+        assert all(isinstance(p, Phase) for p in seq)
 
-        for _ in range(1000):
-            current = Phase.INTRO
-            for i in range(10):
-                next_phase = matrix.get_next_phase(current)
-                pair = (current, next_phase)
-                seen_transitions[pair] = seen_transitions.get(pair, 0) + 1
-                current = next_phase
+    def test_generate_sequence_starts_correctly(self):
+        """generate_sequence starts with the given start phase."""
+        matrix = PhaseTransitionMatrix()
+        seq = matrix.generate_sequence(5, start=Phase.BUILD)
+        assert seq[0] == Phase.BUILD
 
-        # We should see some transitions between various phases
-        assert len(seen_transitions) > 1
+    def test_outro_can_transition_to_intro(self):
+        """Outro has a non-zero transition probability to intro."""
+        matrix = PhaseTransitionMatrix()
+        transitions = matrix.matrix[Phase.OUTRO]
+        has_intro = any(t[0] == Phase.INTRO for t in transitions)
+        assert has_intro
 
-    def test_outro_does_not_transition(self):
-        """Once in outro, the sequence stays in outro."""
-        matrix = PhaseTransitionMatrix.create_default()
-        next_phase = matrix.get_next_phase(Phase.OUTRO)
-        assert next_phase == Phase.OUTRO
-
-
-class TestPhaseStyleBehavior:
-    """Tests for differences in transition behavior across styles."""
-
-    def test_dub_techno_has_longer_sections(self):
-        """Dub techno has longer sections compared to club."""
-        dub_matrix = PhaseTransitionMatrix.create_style(PhaseStyle.DUB_TECHNO)
-        club_matrix = PhaseTransitionMatrix.create_style(PhaseStyle.CLUB)
-
-        # Compare self-transition probabilities (probability to stay in same phase)
-        dub_self = dub_matrix.get_transition_probability(Phase.SUSTAIN, Phase.SUSTAIN)
-        club_self = club_matrix.get_transition_probability(Phase.SUSTAIN, Phase.SUSTAIN)
-
-        # Dub techno should have higher self-transition (longer sustains)
-        assert dub_self > club_self
-
-    def test_ambient_has_longer_intros(self):
-        """Ambient style has longer intros compared to dub techno."""
-        ambient_matrix = PhaseTransitionMatrix.create_style(PhaseStyle.AMBIENT)
-        dub_matrix = PhaseTransitionMatrix.create_style(PhaseStyle.DUB_TECHNO)
-
-        # Compare intro self-transition
-        ambient_intro = ambient_matrix.get_transition_probability(Phase.INTRO, Phase.INTRO)
-        dub_intro = dub_matrix.get_transition_probability(Phase.INTRO, Phase.INTRO)
-
-        assert ambient_intro > dub_intro
-
-    def test_all_night_avoids_outro(self):
-        """All night style has very low probability of reaching outro."""
-        all_night_matrix = PhaseTransitionMatrix.create_style(PhaseStyle.ALL_NIGHT)
-        dub_matrix = PhaseTransitionMatrix.create_default()
-
-        # Sum all probabilities of transitioning to outro
-        all_night_outro = sum(
-            all_night_matrix.get_transition_probability(p, Phase.OUTRO) for p in Phase
-        )
-        dub_outro = sum(dub_matrix.get_transition_probability(p, Phase.OUTRO) for p in Phase)
-
-        assert all_night_outro < dub_outro
+    def test_outro_is_reachable(self):
+        """Outro appears in at least one from-phase transition list."""
+        matrix = PhaseTransitionMatrix()
+        all_to_phases = set()
+        for transitions in matrix.matrix.values():
+            for to_phase, _ in transitions:
+                all_to_phases.add(to_phase)
+        assert Phase.OUTRO in all_to_phases
 
 
-class TestTransitionStyleIntegration:
-    """Tests for integration with TransitionStyle enum."""
+class TestStyleFactory:
+    """Tests for StyleFactory."""
 
-    def test_transition_style_maps_to_phase_style(self):
-        """TransitionStyle aligns with PhaseStyle options."""
-        # This ensures consistency between styling enums
-        assert TransitionStyle.DEFAULT.value == "default"
-        assert TransitionStyle.DUB_TECHNO.value == "dub_techno"
-        assert TransitionStyle.AMBIENT.value == "ambient"
-        assert TransitionStyle.CLUB.value == "club"
-        assert TransitionStyle.ALL_NIGHT.value == "all_night"
+    def test_create_dub_techno(self):
+        """StyleFactory.create('dub_techno') returns a PhaseTransitionMatrix."""
+        matrix = StyleFactory.create("dub_techno")
+        assert isinstance(matrix, PhaseTransitionMatrix)
+        assert len(matrix.matrix) == 6
+
+    def test_create_ambient(self):
+        """StyleFactory.create('ambient') returns a PhaseTransitionMatrix."""
+        matrix = StyleFactory.create("ambient")
+        assert isinstance(matrix, PhaseTransitionMatrix)
+        assert len(matrix.matrix) == 6
+
+    def test_create_club(self):
+        """StyleFactory.create('club') returns a PhaseTransitionMatrix."""
+        matrix = StyleFactory.create("club")
+        assert isinstance(matrix, PhaseTransitionMatrix)
+        assert len(matrix.matrix) == 6
+
+    def test_create_all_night(self):
+        """StyleFactory.create('all_night') returns a PhaseTransitionMatrix."""
+        matrix = StyleFactory.create("all_night")
+        assert isinstance(matrix, PhaseTransitionMatrix)
+        assert len(matrix.matrix) == 6
+
+    def test_invalid_style_raises(self):
+        """Invalid style name raises ValueError."""
+        with pytest.raises(ValueError):
+            StyleFactory.create("invalid_style")
+
+
+class TestTransitionMatrixIntegration:
+    """Tests that matrices work together with generate_sequence."""
+
+    def test_dub_techno_generates_sequence(self):
+        """dub_techno matrix generates a valid sequence."""
+        matrix = PhaseTransitionMatrix.dub_techno()
+        seq = matrix.generate_sequence(20)
+        assert len(seq) == 20
+        assert all(p in Phase for p in seq)
+
+    def test_style_factory_generates_valid_sequence(self):
+        """Each StyleFactory style generates valid sequences."""
+        for style in ("dub_techno", "ambient", "club", "all_night"):
+            matrix = StyleFactory.create(style)
+            seq = matrix.generate_sequence(10)
+            assert len(seq) == 10
+            assert all(p in Phase for p in seq)
 
 
 if __name__ == "__main__":

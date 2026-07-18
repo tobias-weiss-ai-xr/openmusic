@@ -18,6 +18,7 @@ from openmusic.export.youtube_uploader import (
 from openmusic.video import build_video_pipeline_graph
 from openmusic.cli.shorts import short
 from openmusic.cli.stream import stream as stream_group
+from openmusic.cli.scheduler import schedule as schedule_group
 
 
 def _parse_length_to_seconds(length: str) -> float:
@@ -1012,9 +1013,9 @@ def comfyui_status(host: str, port: int):
         click.echo(f"ComfyUI not reachable: {status.get('error', 'unknown')}")
 
 
-# Register short commands
 main.add_command(short)
 main.add_command(stream_group)
+main.add_command(schedule_group)
 
 
 @main.command("publish-video")

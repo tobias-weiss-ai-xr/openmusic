@@ -40,13 +40,13 @@ Python CLI orchestrates everything into seamless mixes with YouTube upload.
 All code-level automation features in the [2026 release plan](.sisyphus/plans/2026-release-plan.md)
 are now implemented:
 
-| Item                                   | Status         | Notes                                                                                           |
-| -------------------------------------- | -------------- | ----------------------------------------------------------------------------------------------- |
-| `openmusic release` command            | ✅ Complete    | One-shot generate + render + upload                                                             |
-| Monthly batch short generation         | ✅ Complete    | `openmusic short batch`, `openmusic short devops-generate`                                      |
-| Playlist management auto-create/append | ✅ Complete    | All three backends (API / youtube-up / yt-upload) support playlist creation and video appendage |
-| Scheduling system (cron-based)         | ⏳ Not started | Operational concern; see below                                                                  |
-| Analytics tracking                     | ⏳ Not started | YouTube Analytics API integration needed                                                        |
+| Item                                   | Status         | Notes                                                                                             |
+| -------------------------------------- | -------------- | ------------------------------------------------------------------------------------------------- |
+| `openmusic release` command            | ✅ Complete    | One-shot generate + render + upload                                                               |
+| Monthly batch short generation         | ✅ Complete    | `openmusic short batch`, `openmusic short devops-generate`                                        |
+| Playlist management auto-create/append | ✅ Complete    | All three backends (API / youtube-up / yt-upload) support playlist creation and video appendage   |
+| Scheduling system (cron-based)         | ✅ Complete    | `openmusic schedule add/remove/list/run/enable/disable`, cron validation, Telegram/Discord notifs |
+| Analytics tracking                     | ⏳ Not started | YouTube Analytics API integration needed                                                          |
 
 ### OAuth Scope
 
@@ -79,9 +79,6 @@ The following Python `patterns` subsystem test files have been updated to match 
 
 ### Medium-term
 
-- **Scheduling system**: Cron-based overnight mix generation with Telegram/Discord notifications.
-  Design: `openmusic schedule --cron "0 2 * * 5" --command "generate --length 2h"` with output
-  to a scheduled YouTube premiere.
 - **Analytics tracking**: YouTube Analytics API v3 integration for per-content-type view/sub tracking.
   Design: `openmusic analytics` command with weekly summary reports.
 

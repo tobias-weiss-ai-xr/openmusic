@@ -36,7 +36,7 @@ jobs:
     runs-on: self-hosted
     strategy:
       matrix:
-        python-version: ["3.12"]
+        python-version: ['3.12']
     steps:
       - uses: actions/checkout@v4
       - name: Install system dependencies
@@ -57,4 +57,4 @@ jobs:
       - name: Install dependencies
         run: cd packages/core && uv venv --python ${{ matrix.python-version }} && uv pip install -e ".[dev]"
       - name: Run Python tests
-        run: cd packages/core && .venv/bin/python -m pytest -v --tb=short --ignore=tests/test_patterns
+        run: cd packages/core && .venv/bin/python -m pytest -v --tb=short

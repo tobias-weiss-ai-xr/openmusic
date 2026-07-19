@@ -13,11 +13,6 @@ from openmusic.patterns.pattern_library import (
 )
 
 
-# Default paths that would be programmatically generated
-DEFAULT_CACHE_DIR = Path.home() / ".openmusic" / "cache" / "patterns"
-DEFAULT_PATTERN_DB_PATH = DEFAULT_CACHE_DIR / "patterns.json"
-
-
 class TestPatternEntryDataclass:
     """Tests for the PatternEntry dataclass."""
 
@@ -50,7 +45,6 @@ class TestPatternEntryDataclass:
         assert entry.energy == 0.5
         assert entry.density == 0.5
         assert entry.phase == "build"
-        assert entry.play_count == 0
 
     def test_quality_score_bounds(self):
         """quality_score accepts values in [0.0, 1.0] range."""
@@ -75,63 +69,29 @@ class TestPatternLibraryBasics:
 
     def test_add_pattern(self):
         """Add a pattern to the library."""
-        lib = PatternLibrary()
-        entry = PatternEntry(
-            path="/path/to/wav.wav", prompt="test prompt", tags=["bass"]
-        )
-        lib.add_pattern(entry)
-        assert len(lib.get_all_patterns()) == 1
-
-    def test_add_pattern_generates_id(self):
-        """Add pattern should auto-increment next_id."""
-        lib = PatternLibrary()
-        entry1 = PatternEntry(
-            path="/path/to/wav1.wav", prompt="test1", tags=["bass"]
-        )
-        entry2 = PatternEntry(
-            path="/path/to/wav2.wav", prompt="test2", tags=["bass"]
-        )
-        lib.add_pattern(entry1)
-        lib.add_pattern(entry2)
-
-        patterns = lib.get_all_patterns()
-        pattern_ids = [p.id for p in patterns]
-
-        assert pattern_ids[0] == 1
-        assert pattern_ids[1] == 2
-
-    def test_get_pattern_by_id(self):
-        """Retrieve a pattern by its ID."""
-        lib = PatternLibrary()
-        entry = PatternEntry(
-            path="/path/to/wav.wav", prompt="test prompt", tags=["bass"]
-        )
-        lib.add_pattern(entry)
-
-        retrieved = lib.get_pattern(entry.id)
-        assert retrieved is not None
-        assert retrieved.id == entry.id
-        assert retrieved.path == entry.path
-
-    def test_get_pattern_nonexistent(self):
-        """Attempting to get nonexistent pattern returns None."""
-        lib = PatternLibrary()
-        assert lib.get_pattern(999) is None
+        with tempfile.NamedTemporaryFile(suffix=".json", delete=True) as f:
+            lib = PatternLibrary(path=f.name)
+            entry = PatternEntry(
+                path="/path/to/wav.wav", duration=30.0, bpm=125, key="Dm", tags=["bass"]
+            )
+            lib.add(entry)
+            assert len(lib.patterns) == 1
 
     def test_get_all_patterns(self):
         """Retrieving all patterns returns complete list."""
-        lib = PatternLibrary()
-        entries = [
-            PatternEntry(path=f"/path/to/wav{i}.wav", prompt=f"test{i}", tags=["bass"])
-            for i in range(5)
-        ]
-        for entry in entries:
-            lib.add_pattern(entry)
+        with tempfile.NamedTemporaryFile(suffix=".json", delete=True) as f:
+            lib = PatternLibrary(path=f.name)
+            entries = [
+                PatternEntry(path=f"/path/to/wav{i}.wav", duration=30.0, bpm=125, key="Dm", tags=["bass"])
+                for i in range(5)
+            ]
+            for entry in entries:
+                lib.add(entry)
 
-        patterns = lib.get_all_patterns()
-        assert len(patterns) == 5
-        for p in patterns:
-            assert p.path.startswith("/path/to/wav")
+            patterns = lib.patterns
+            assert len(patterns) == 5
+            for p in patterns:
+                assert p.path.startswith("/path/to/wav")
 
 
 class TestPatternLibraryFiltering:
@@ -139,65 +99,70 @@ class TestPatternLibraryFiltering:
 
     def test_filter_by_single_tag(self):
         """Filter patterns by a single tag."""
-        lib = PatternLibrary()
+        with tempfile.NamedTemporaryFile(suffix=".json", delete=True) as f:
+            lib = PatternLibrary(path=f.name)
 
-        # Add patterns with bass and drums tags
-        for i in range(3):
-            entry = PatternEntry(
-                path=f"/bass_{i}.wav", prompt=f"bass{i}", tags=["bass", "high"]
-            )
-            lib.add_pattern(entry)
+            for i in range(3):
+                entry = PatternEntry(
+                    path=f"/bass_{i}.wav", duration=30.0, bpm=125, key="Dm", tags=["bass", "high"]
+                )
+                lib.add(entry)
 
-        for i in range(2):
-            entry = PatternEntry(
-                path=f"/drums_{i}.wav", prompt=f"drums{i}", tags=["drums"]
-            )
-            lib.add_pattern(entry)
+            for i in range(2):
+                entry = PatternEntry(
+                    path=f"/drums_{i}.wav", duration=30.0, bpm=125, key="Dm", tags=["drums"]
+                )
+                lib.add(entry)
 
-        bass_patterns = lib.get_patterns_by_tags(["bass"])
-        assert len(bass_patterns) == 3
+            bass_patterns = lib.get_by_tags(["bass"])
+            assert len(bass_patterns) == 3
 
-        for pattern in bass_patterns:
-            assert "bass" in pattern.tags
+            for pattern in bass_patterns:
+                assert "bass" in pattern.tags
 
-    def test_filter_by_multiple_tags(self):
+    def test_filter_by_multiple_tags_and(self):
         """Filter patterns by multiple tags (AND logic)."""
-        lib = PatternLibrary()
+        with tempfile.NamedTemporaryFile(suffix=".json", delete=True) as f:
+            lib = PatternLibrary(path=f.name)
 
-        # Pattern with both bass and high
-        entry1 = PatternEntry(
-            path="/pattern1.wav", prompt="test1", tags=["bass", "high"]
-        )
-        lib.add_pattern(entry1)
+            entry1 = PatternEntry(
+                path="/pattern1.wav", duration=30.0, bpm=125, key="Dm", tags=["bass", "high"]
+            )
+            lib.add(entry1)
 
-        # Pattern with only bass
-        entry2 = PatternEntry(path="/pattern2.wav", prompt="test2", tags=["bass"])
-        lib.add_pattern(entry2)
+            entry2 = PatternEntry(
+                path="/pattern2.wav", duration=30.0, bpm=125, key="Dm", tags=["bass"]
+            )
+            lib.add(entry2)
 
-        # Pattern with only high
-        entry3 = PatternEntry(path="/pattern3.wav", prompt="test3", tags=["high"])
-        lib.add_pattern(entry3)
+            entry3 = PatternEntry(
+                path="/pattern3.wav", duration=30.0, bpm=125, key="Dm", tags=["high"]
+            )
+            lib.add(entry3)
 
-        # Filter for patterns with BOTH bass and high
-        results = lib.get_patterns_by_tags(["bass", "high"])
-        assert len(results) == 1
-        assert results[0].id == entry1.id
+            results = lib.get_by_tags(["bass", "high"], mode="all")
+            assert len(results) == 1
+            assert results[0].path == entry1.path
 
     def test_filter_empty_library(self):
         """Filtering empty library returns empty list."""
-        lib = PatternLibrary()
-        results = lib.get_patterns_by_tags(["bass"])
-        assert len(results) == 0
+        with tempfile.NamedTemporaryFile(suffix=".json", delete=True) as f:
+            lib = PatternLibrary(path=f.name)
+            results = lib.get_by_tags(["bass"])
+            assert len(results) == 0
 
     def test_filter_no_matches(self):
         """Filtering for tags that don't match returns empty list."""
-        lib = PatternLibrary()
+        with tempfile.NamedTemporaryFile(suffix=".json", delete=True) as f:
+            lib = PatternLibrary(path=f.name)
 
-        entry = PatternEntry(path="/pattern1.wav", prompt="test1", tags=["bass"])
-        lib.add_pattern(entry)
+            entry = PatternEntry(
+                path="/pattern1.wav", duration=30.0, bpm=125, key="Dm", tags=["bass"]
+            )
+            lib.add(entry)
 
-        results = lib.get_patterns_by_tags(["drums"])
-        assert len(results) == 0
+            results = lib.get_by_tags(["drums"])
+            assert len(results) == 0
 
 
 class TestPatternLibrarySampling:
@@ -205,73 +170,52 @@ class TestPatternLibrarySampling:
 
     def test_sample_single_pattern(self):
         """Sample a single pattern randomly."""
-        lib = PatternLibrary()
-        for i in range(5):
-            entry = PatternEntry(
-                path=f"/pattern{i}.wav", prompt=f"test{i}", tags=["bass"]
-            )
-            lib.add_pattern(entry)
+        with tempfile.NamedTemporaryFile(suffix=".json", delete=True) as f:
+            lib = PatternLibrary(path=f.name)
+            entries = [
+                PatternEntry(
+                    path=f"/pattern{i}.wav", duration=30.0, bpm=125, key="Dm", tags=["bass"]
+                )
+                for i in range(5)
+            ]
+            for e in entries:
+                lib.add(e)
 
-        sampled = lib.sample(1)
-        assert len(sampled) == 1
-        assert isinstance(sampled[0], PatternEntry)
+            sampled = lib.sample(entries)
+            assert sampled is not None
+            assert isinstance(sampled, PatternEntry)
+            assert sampled.path.startswith("/pattern")
 
     def test_sample_multiple_patterns(self):
-        """Sample multiple patterns without replacement."""
-        lib = PatternLibrary()
-        for i in range(5):
-            entry = PatternEntry(
-                path=f"/pattern{i}.wav", prompt=f"test{i}", tags=["bass"]
-            )
-            lib.add_pattern(entry)
+        """Sample picks from available candidates."""
+        with tempfile.NamedTemporaryFile(suffix=".json", delete=True) as f:
+            lib = PatternLibrary(path=f.name)
+            entries = [
+                PatternEntry(
+                    path=f"/pattern{i}.wav", duration=30.0, bpm=125, key="Dm", tags=["bass"]
+                )
+                for i in range(5)
+            ]
+            for e in entries:
+                lib.add(e)
 
-        sampled = lib.sample(3)
-        assert len(sampled) == 3
+            sampled = lib.sample(entries)
+            assert sampled is not None
+            assert sampled.path.startswith("/pattern")
 
-        # All sampled patterns should be unique
-        sampled_ids = [p.id for p in sampled]
-        assert len(sampled_ids) == len(set(sampled_ids))
+    def test_sample_empty_candidates(self):
+        """Sampling from empty candidates returns None."""
+        with tempfile.NamedTemporaryFile(suffix=".json", delete=True) as f:
+            lib = PatternLibrary(path=f.name)
+            sampled = lib.sample([])
+            assert sampled is None
 
-    def test_sample_more_than_available(self):
-        """Sampling more patterns than available should return all patterns."""
-        lib = PatternLibrary()
-        for i in range(3):
-            entry = PatternEntry(
-                path=f"/pattern{i}.wav", prompt=f"test{i}", tags=["bass"]
-            )
-            lib.add_pattern(entry)
-
-        sampled = lib.sample(10)
-        assert len(sampled) == 3
-
-    def test_sample_filtered(self):
-        """Sample from patterns that match tags filter."""
-        lib = PatternLibrary()
-
-        # Add bass and drums patterns
-        for i in range(5):
-            entry = PatternEntry(
-                path=f"/bass_{i}.wav", prompt=f"bass{i}", tags=["bass", "high"]
-            )
-            lib.add_pattern(entry)
-
-        for i in range(5):
-            entry = PatternEntry(
-                path=f"/drums_{i}.wav", prompt=f"drums{i}", tags=["drums"]
-            )
-            lib.add_pattern(entry)
-
-        # Sample 2 bass patterns
-        sampled = lib.sample(2, tags=["bass"])
-        assert len(sampled) == 2
-        for pattern in sampled:
-            assert "bass" in pattern.tags
-
-    def test_sample_empty_library(self):
-        """Sampling from empty library returns empty list."""
-        lib = PatternLibrary()
-        sampled = lib.sample(5)
-        assert len(sampled) == 0
+    def test_sample_returns_none_for_empty_list(self):
+        """Sampling with empty candidate list returns None."""
+        with tempfile.NamedTemporaryFile(suffix=".json", delete=True) as f:
+            lib = PatternLibrary(path=f.name)
+            result = lib.sample([])
+            assert result is None
 
 
 class TestPatternLibraryPersistence:
@@ -282,29 +226,53 @@ class TestPatternLibraryPersistence:
         with tempfile.TemporaryDirectory() as tmpdir:
             db_path = os.path.join(tmpdir, "patterns.json")
 
-            lib = PatternLibrary(db_path=db_path)
+            lib = PatternLibrary(path=db_path)
             entries = [
                 PatternEntry(
-                    path=f"/pattern{i}.wav", prompt=f"test{i}", tags=["bass" if i % 2 == 0 else "high"]
+                    path=f"/pattern{i}.wav",
+                    duration=float(30 + i),
+                    bpm=125,
+                    key="Dm",
+                    tags=["bass" if i % 2 == 0 else "high"],
                 )
                 for i in range(3)
             ]
             for entry in entries:
-                lib.add_pattern(entry)
+                lib.add(entry)
 
-            # Save
             lib.save()
 
-            # Load into new library
-            new_lib = PatternLibrary(db_path=db_path)
+            new_lib = PatternLibrary(path=db_path)
             new_lib.load()
 
-            # Verify patterns match
-            patterns = new_lib.get_all_patterns()
+            patterns = new_lib.patterns
             assert len(patterns) == 3
             for i, pattern in enumerate(patterns):
                 assert pattern.path == f"/pattern{i}.wav"
-                assert pattern.prompt == f"test{i}"
+                assert pattern.duration == float(30 + i)
+
+    def test_auto_load_on_init(self):
+        """Library auto-loads existing path on init."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            db_path = os.path.join(tmpdir, "patterns.json")
+
+            lib = PatternLibrary(path=db_path)
+            entries = [
+                PatternEntry(path="/test.wav", duration=30.0, bpm=125, key="Dm")
+            ]
+            for e in entries:
+                lib.add(e)
+            lib.save()
+
+            new_lib = PatternLibrary(path=db_path, auto_load=True)
+            assert len(new_lib.patterns) == 1
+
+    def test_load_empty_file(self):
+        """Loading from empty or nonexistent file returns empty."""
+        with tempfile.NamedTemporaryFile(suffix=".json", delete=True) as f:
+            lib = PatternLibrary(path=f.name)
+            lib.load()
+            assert len(lib.patterns) == 0
 
 
 if __name__ == "__main__":

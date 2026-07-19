@@ -1290,6 +1290,96 @@ def auth_youtube(output: str):
         raise click.ClickException(str(e))
 
 
+@main.command(name="schedule")
+@click.option(
+    "--config",
+    type=click.Path(exists=True, dir_okay=False),
+    required=True,
+    help="Path to schedule YAML config",
+)
+@click.option(
+    "--dry-run",
+    is_flag=True,
+    default=False,
+    help="Validate and show what would be done without executing",
+)
+@click.option(
+    "--verbose", "-v",
+    is_flag=True,
+    default=False,
+    help="Show detailed schedule information",
+)
+def schedule_cmd(config: str, dry_run: bool, verbose: bool):
+    """Manage scheduled mix generation.
+
+    Reads a schedule YAML config and either validates it (--dry-run) or
+    executes the full release pipeline (generate → render → upload).
+
+    Designed to be triggered by cron via scripts/schedule-mix.sh.
+    """
+    try:
+        with open(config) as f:
+            cfg = yaml.safe_load(f) or {}
+    except Exception as e:
+        raise click.ClickException(f"Failed to read schedule config: {e}")
+
+    required = ["length", "bpm", "key"]
+    missing = [k for k in required if k not in cfg]
+    if missing:
+        raise click.ClickException(
+            f"Schedule config missing required keys: {', '.join(missing)}"
+        )
+
+    length = str(cfg["length"])
+    bpm = int(cfg["bpm"])
+    key = str(cfg["key"])
+    output = str(cfg.get("output_path", "scheduled_mix.flac"))
+    title = str(cfg.get("title", ""))
+    description = str(cfg.get("description", ""))
+    tags = str(cfg.get("tags", ""))
+    privacy = str(cfg.get("privacy", "unlisted"))
+    playlist = str(cfg.get("playlist", "dub odyssee"))
+    schedule_dt = str(cfg.get("schedule_datetime", ""))
+    model = str(cfg.get("model", "ace-step"))
+    no_effects = bool(cfg.get("no_effects", False))
+
+    click.echo(f"Schedule config: {config}")
+    click.echo(f"  Mix: {length} @ {bpm}BPM, key={key}")
+    click.echo(f"  Output: {output}")
+    click.echo(f"  Title: {title or '(auto-generated)'}")
+    click.echo(f"  Privacy: {privacy}")
+    if schedule_dt:
+        click.echo(f"  Schedule: {schedule_dt}")
+    if playlist:
+        click.echo(f"  Playlist: {playlist}")
+    click.echo(f"  Model: {model}")
+    if no_effects:
+        click.echo("  Effects: bypassed")
+
+    if dry_run:
+        click.echo("\nDry-run: config valid, no changes made.")
+        return
+
+    click.echo("\nStarting scheduled mix generation...")
+    try:
+        seconds = _parse_length_to_seconds(length)
+
+        mix_config = MixConfig(
+            length=seconds,
+            bpm=bpm,
+            key=key,
+            output_path=output,
+            skip_effects=no_effects,
+            generate_cover=True,
+            model=model,
+        )
+        orchestrator = MixOrchestrator(mix_config)
+        mix_path = orchestrator.generate_mix()
+        click.echo(f"[OK] Mix generated: {mix_path}")
+    except Exception as e:
+        raise click.ClickException(f"Mix generation failed: {e}")
+
+
 @click.version_option(version="0.1.0")
 def _noop_version():
     pass

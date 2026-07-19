@@ -1,0 +1,32 @@
+# OpenMusic Schedule Configuration
+# ============================================================================
+# This config defines a scheduled mix release for automated cron-based
+# generation. Use with scripts/schedule-mix.sh or openmusic schedule.
+#
+# All fields are optional except length, bpm, key, and output_path.
+# ============================================================================
+
+# Mix parameters
+length: 2h
+bpm: 125
+key: Dm
+output_path: 'scheduled_mix.flac'
+model: ace-step
+no_effects: false
+
+# YouTube metadata
+title: 'Deep Dub Techno | Scheduled Mix @125BPM Dm'
+description: |
+  AI-powered dub techno mix generated automatically.
+  https://graphwiz.ai
+  https://github.com/tobias-weiss-ai-xr/openmusic
+tags: 'dub,techno,deep,minimal,ai,openmusic'
+privacy: unlisted
+playlist: 'dub odyssee'
+
+# Optional: schedule a future premiere (ISO 8601 UTC)
+# If omitted, the mix is uploaded immediately (or published per privacy setting)
+# schedule_datetime: "2026-08-01T12:00:00Z"
+
+# Optional: notification webhook (URL to POST on completion/failure)
+# notification_url: ""

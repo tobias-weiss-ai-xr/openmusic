@@ -28,3 +28,7 @@ cookies_*
 cover_*.svg
 mix_cover_*
 youtube_current.jpeg
+
+# Scheduled mix generation outputs
+.cache/schedule-logs/
+scheduled_*.flac

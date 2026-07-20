@@ -1,0 +1,42 @@
+# OpenMusic Scheduled Generation Configuration
+# =============================================
+# This config defines a recurring mix generation schedule for cron-based
+# automation. Save it and point scripts/schedule-mix.sh at it, or run:
+#
+#   openmusic release --config examples/schedule.yaml
+
+# -- Mix Parameters --
+length: 1h
+bpm: 125
+key: Dm
+output_path: 'scheduled_mix.flac'
+segment_duration: 180
+effects_preset: deep_dub
+format: flac
+
+# -- YouTube Upload --
+upload:
+  title: 'Dub Techno Odyssey | AI Generated'
+  description: >
+    AI-powered dub techno mix, generated with OpenMusic.
+    https://graphwiz.ai
+    https://github.com/tobias-weiss-ai-xr/openmusic
+  tags: ['dub techno', 'electronic music', 'AI generated']
+  privacy: unlisted
+  playlist: 'dub odyssee'
+
+# -- Notifications (optional) --
+# Configure one or both channels. All fields are optional.
+notification:
+  # Webhook: POST a JSON payload to this URL on completion
+  # webhook_url: "https://hooks.slack.com/services/..."
+  # webhook_secret: "optional-hmac-secret"
+
+  # Email: requires SMTP credentials (also read from env vars:
+  #   OPENMUSIC_EMAIL_FROM, OPENMUSIC_SMTP_SERVER, OPENMUSIC_SMTP_PORT,
+  #   OPENMUSIC_SMTP_USERNAME, OPENMUSIC_SMTP_PASSWORD)
+  # email_to: "you@example.com"
+
+  # Event filtering (defaults: both true)
+  notify_on_success: true
+  notify_on_failure: true

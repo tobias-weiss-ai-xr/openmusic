@@ -99,9 +99,9 @@
 
 36 Python test failures in the `patterns` subsystem due to test rot (tests written for APIs that have since changed):
 
-- [ ] `test_pattern_library.py` — 20 failures: `PatternLibrary.__init__()` requires `path`; uses `add()`/`patterns`/`get_by_tags()`/`sample()` APIs
-- [ ] `test_markov.py` — 15 failures: `PhaseTransitionMatrix` uses `StyleFactory.create()` not `create_style()`; phase enum values changed
-- [ ] `test_bayesian.py` — 1 failure: `PatternLibrary` requires `path`; `PatternEntry` has no `name`/`description` fields
+- [x] `test_pattern_library.py` — 20 failures: `PatternLibrary.__init__()` requires `path`; uses `add()`/`patterns`/`get_by_tags()`/`sample()` APIs
+- [x] `test_markov.py` — 15 failures: `PhaseTransitionMatrix` uses `StyleFactory.create()` not `create_style()`; phase enum values changed
+- [x] `test_bayesian.py` — 1 failure: `PatternLibrary` requires `path`; `PatternEntry` has no `name`/`description` fields
 
 ### 2. Scheduling System — Automated Mix Generation
 
@@ -109,11 +109,11 @@
 
 Build infrastructure for scheduled, unattended mix generation:
 
-- [ ] Cron job script for overnight mix generation
-- [ ] Configuration for scheduled releases (day/time/template)
-- [ ] Output rotation (archive old mixes)
-- [ ] Notification on completion (email/webhook)
-- [ ] Documentation for setting up scheduling
+- [x] Cron job script for overnight mix generation
+- [x] Configuration for scheduled releases (day/time/template)
+- [x] Output rotation (archive old mixes)
+- [x] Notification on completion (email/webhook)
+- [x] Documentation for setting up scheduling
 
 ### 3. Analytics Tracking — Channel Performance
 

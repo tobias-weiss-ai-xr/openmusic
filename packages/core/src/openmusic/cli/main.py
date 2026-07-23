@@ -15,6 +15,7 @@ from openmusic.export.youtube_uploader import (
     YouTubeUploadConfig,
     YouTubeUploadError,
 )
+from openmusic.notification import Notifier, NotificationConfig, NotificationEvent
 from openmusic.video import build_video_pipeline_graph
 from openmusic.cli.shorts import short
 from openmusic.cli.stream import stream as stream_group
@@ -817,6 +818,24 @@ def publish(
     default="ace-step",
     help="Audio generation model (default: ace-step)",
 )
+@click.option(
+    "--notify-webhook",
+    required=False,
+    default=None,
+    help="URL to POST a JSON notification on completion (webhook/Slack/Discord)",
+)
+@click.option(
+    "--notify-webhook-secret",
+    required=False,
+    default=None,
+    help="Optional shared secret for HMAC-SHA256 signing of webhook payloads",
+)
+@click.option(
+    "--notify-email",
+    required=False,
+    default=None,
+    help="Email address(es) to notify on completion (comma-separated)",
+)
 def release(
     length: str,
     bpm: int,
@@ -832,6 +851,9 @@ def release(
     client_secrets: Optional[str],
     no_effects: bool,
     model: str,
+    notify_webhook: Optional[str],
+    notify_webhook_secret: Optional[str],
+    notify_email: Optional[str],
 ):
     """Generate a mix, render MP4 with cover art, and upload to YouTube.
 
@@ -856,6 +878,24 @@ def release(
             f"https://github.com/tobias-weiss-ai-xr/openmusic"
         )
 
+    # Build notifier if any notification channel is configured
+    notifier: Optional[Notifier] = None
+    if notify_webhook or notify_email:
+        ncfg = NotificationConfig(
+            webhook_url=notify_webhook,
+            webhook_secret=notify_webhook_secret,
+            email_to=notify_email,
+        )
+        # If email is used, try to read SMTP config from env
+        if notify_email:
+            import os as _os
+            ncfg.email_from = _os.getenv("OPENMUSIC_EMAIL_FROM")
+            ncfg.smtp_server = _os.getenv("OPENMUSIC_SMTP_SERVER")
+            ncfg.smtp_port = int(_os.getenv("OPENMUSIC_SMTP_PORT", "587"))
+            ncfg.smtp_username = _os.getenv("OPENMUSIC_SMTP_USERNAME")
+            ncfg.smtp_password = _os.getenv("OPENMUSIC_SMTP_PASSWORD")
+        notifier = Notifier(ncfg)
+
     # Step 1: Generate mix
     click.echo(f"\n[1/3] Generating mix ({length}, {bpm}BPM, {key})...")
     try:
@@ -872,6 +912,12 @@ def release(
         mix_path = orchestrator.generate_mix()
         click.echo(f"[OK] Mix generated: {mix_path}")
     except Exception as e:
+        if notifier:
+            notifier.notify(NotificationEvent(
+                status="failure",
+                title=title or "OpenMusic Release",
+                error_message=f"Mix generation failed: {e}",
+            ))
         raise click.ClickException(f"Mix generation failed: {e}")
 
     # Step 2: Render MP4 with cover art
@@ -932,10 +978,28 @@ def release(
         _subprocess.run(cmd, check=True, capture_output=True, text=True, timeout=3600)
         click.echo(f"[OK] MP4 rendered: {mp4_path}")
     except _subprocess.TimeoutExpired:
+        if notifier:
+            notifier.notify(NotificationEvent(
+                status="failure",
+                title=title or "OpenMusic Release",
+                error_message="ffmpeg timed out after 1 hour",
+            ))
         raise click.ClickException("ffmpeg timed out after 1 hour")
     except _subprocess.CalledProcessError as e:
+        if notifier:
+            notifier.notify(NotificationEvent(
+                status="failure",
+                title=title or "OpenMusic Release",
+                error_message=f"ffmpeg failed: {e.stderr[:500]}",
+            ))
         raise click.ClickException(f"ffmpeg failed: {e.stderr}")
     except Exception as e:
+        if notifier:
+            notifier.notify(NotificationEvent(
+                status="failure",
+                title=title or "OpenMusic Release",
+                error_message=f"MP4 rendering failed: {e}",
+            ))
         raise click.ClickException(f"MP4 rendering failed: {e}")
 
     # Step 3: Upload to YouTube
@@ -957,12 +1021,34 @@ def release(
         click.echo(f"[OK] Upload successful!")
         click.echo(f"  Video ID: {video_id}")
         click.echo(f"  URL: https://youtube.com/watch?v={video_id}")
+        if notifier:
+            notifier.notify(NotificationEvent(
+                status="success",
+                title=title or "OpenMusic Release",
+                output_path=mp4_path,
+                video_id=video_id,
+                video_url=f"https://youtube.com/watch?v={video_id}",
+                duration_seconds=seconds,
+            ))
     except YouTubeUploadError as e:
         click.echo(f"[!] YouTube upload failed: {e}")
         click.echo(f"\nMP4 file saved at: {mp4_path}")
         click.echo("You can upload it manually to YouTube.")
+        if notifier:
+            notifier.notify(NotificationEvent(
+                status="failure",
+                title=title or "OpenMusic Release",
+                error_message=f"YouTube upload failed: {e}",
+                output_path=mp4_path,
+            ))
         return 1
     except Exception as e:
+        if notifier:
+            notifier.notify(NotificationEvent(
+                status="failure",
+                title=title or "OpenMusic Release",
+                error_message=f"YouTube upload error: {e}",
+            ))
         raise click.ClickException(f"YouTube upload error: {e}")
 
     click.echo("\n" + "=" * 50)

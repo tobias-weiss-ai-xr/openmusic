@@ -1,7 +1,39 @@
-# OpenMusic Project Roadmap
+# OpenMusic — Roadmap
 
 > **Current Version**: 0.1.0
 > **Status**: All pipeline features implemented, first YouTube release pipeline ready
+
+---
+
+## Project Status
+
+OpenMusic is an AI-powered dub techno generation framework with a complete pipeline:
+ACE-Step 1.5 generates raw audio (GPU), Tone.js effects process it (Node.js), and a
+Python CLI orchestrates everything into seamless mixes with YouTube upload.
+
+### Tech Stack
+
+| Layer              | Technology                                                    |
+| ------------------ | ------------------------------------------------------------- |
+| Audio generation   | ACE-Step 1.5 (DiT, 8 turbo steps, CUDA 12.8)                  |
+| Effects processing | Tone.js via Node.js OfflineAudioContext                       |
+| CLI                | Click (Python)                                                |
+| YouTube upload     | YouTube Data API v3 + youtube-up fallback                     |
+| Tests              | pytest (Python, ~705 tests) + vitest (TypeScript, ~177 tests) |
+
+### CLI Commands
+
+- **`openmusic generate`** — Generate mixes from CLI flags or YAML config
+- **`openmusic publish`** — Generate + render MP4 + upload to YouTube
+- **`openmusic release`** — One-shot: generate + render + upload
+- **`openmusic publish-video`** — AI-generated video pipeline (SDXL/SVG)
+- **`openmusic upload`** — Upload existing MP4 with metadata
+- **`openmusic short`** — Generate and batch-upload Shorts
+- **`openmusic stream`** — Live streaming audio
+- **`openmusic schedule`** — Automated cron-based mix generation
+- **`openmusic mcp`** — MCP orchestration (Ableton Live, ComfyUI)
+- **`openmusic auth-youtube`** — OAuth token generation
+- **`openmusic validate`** — YAML config validation
 
 ---
 
@@ -78,6 +110,7 @@
 - [x] Thumbnail support
 - [x] Scheduled publishing (ISO 8601 premiere)
 - [x] Fallback upload via cookies.txt
+- [x] OAuth scope: `youtube` (not `youtube.upload`) for playlist operations
 
 ### Shorts Pipeline
 
@@ -96,6 +129,17 @@
 - [x] `examples/schedule.yaml` — configuration template
 - [x] Log rotation (keep last 20 scheduled run logs)
 - [x] YouTube upload integration (via `openmusic release`)
+- [x] Telegram/Discord notification support
+
+### Pre-existing Test Failures — Resolved
+
+The following test files were updated to match current APIs:
+
+| File                                    | Fix Applied                                                                  |
+| --------------------------------------- | ---------------------------------------------------------------------------- |
+| `test_patterns/test_pattern_library.py` | Rewritten for current API: `add()`, `.patterns`, `get_by_tags()`, `sample()` |
+| `test_patterns/test_bayesian.py`        | Updated `PatternLibrary(path=...)`, removed `Patterns` wrapper references    |
+| `test_patterns/test_markov.py`          | Updated to string enum values, `StyleFactory.create()`, `next_phase()`       |
 
 ---
 
@@ -123,19 +167,16 @@ Track YouTube channel performance and mix quality metrics:
 
 **Priority**: Low | **Effort**: Ongoing
 
-Scale content production per the 2026 release plan:
-
 - [ ] DevOps tips expansion (Terraform, K8s, CI/CD, SRE)
 - [ ] AI/ML tips expansion (LLMs, agents, RAG, fine-tuning)
 - [ ] Graph tips expansion (Neo4j, GraphRAG, graph algorithms)
 - [ ] Mix theme rotation (dark ambient, Detroit techno, hypnotic)
 
-### 4. Test Suite Cleanup
+### 4. Dependency Audit
 
-**Priority**: Medium | **Effort**: Medium
+**Priority**: Low | **Effort**: Low
 
-- [ ] Fix ~36 pre-existing pattern test failures (test_patterns/) — API drift in `PatternLibrary`, `PhaseTransitionMatrix`, `StyleFactory`
-- [ ] Keep tests passing on main (CI gate)
+- [ ] Review optional dependency groups (`acestep`, `dsp`, `video`, `artwork`)
 
 ---
 
@@ -143,8 +184,10 @@ Scale content production per the 2026 release plan:
 
 - [ ] DAW integration (Ableton Live export)
 - [ ] Live DJ performance mode
+- [ ] CI/CD pipeline with GPU runner for automated generation
+- [ ] Content performance dashboard
+- [ ] Multi-channel YouTube support
 - [ ] Real-time parameter control (MIDI)
 - [ ] Web interface for mix management
 - [ ] Multi-model AI support
 - [ ] Fine-tuning pipeline for custom sounds
-- [ ] Mobile app for monitoring

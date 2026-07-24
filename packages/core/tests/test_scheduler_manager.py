@@ -25,6 +25,7 @@ def sample_job_data():
         "created_at": "2026-07-18T12:00:00",
         "updated_at": "2026-07-18T12:00:00",
         "notifier_config": None,
+        "notification_config": None,
     }
 
 

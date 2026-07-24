@@ -145,6 +145,21 @@ When running `openmusic release` directly:
 --notify-email EMAIL               Recipient email address(es)
 ```
 
+When running `openmusic schedule add`:
+
+```
+--notify-webhook URL               Webhook URL for JSON POST
+--notify-webhook-secret SECRET     HMAC-SHA256 signing secret
+--notify-email EMAIL               Recipient email address(es)
+--telegram-token TOKEN             Telegram bot token
+--telegram-chat CHAT_ID            Telegram chat ID
+--discord-webhook URL              Discord webhook URL
+--notify-on EVENTS                 Events to notify on (default: success,failure)
+```
+
+For `schedule add`, SMTP credentials for email are read from the same
+environment variables (`OPENMUSIC_EMAIL_FROM`, `OPENMUSIC_SMTP_SERVER`, etc.).
+
 ## Logging
 
 The schedule shell script logs to `logs/schedule-YYYYMMDD-HHMMSS.log`.

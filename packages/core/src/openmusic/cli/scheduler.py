@@ -1,7 +1,9 @@
 """CLI commands for managing scheduled jobs."""
 import json
+import os
 import sys
 from pathlib import Path
+from typing import Optional
 
 import click
 
@@ -48,6 +50,24 @@ def schedule():
     default="success,failure",
     help="Events to notify on: start,success,failure (comma-separated, default: success,failure)",
 )
+@click.option(
+    "--notify-webhook",
+    required=False,
+    default=None,
+    help="URL to POST a JSON notification on completion (webhook/Slack/Discord)",
+)
+@click.option(
+    "--notify-webhook-secret",
+    required=False,
+    default=None,
+    help="Optional shared secret for HMAC-SHA256 signing of webhook payloads",
+)
+@click.option(
+    "--notify-email",
+    required=False,
+    default=None,
+    help="Email address(es) to notify on completion (comma-separated)",
+)
 def schedule_add(
     cron: str,
     command: str,
@@ -57,6 +77,9 @@ def schedule_add(
     telegram_chat: str | None,
     discord_webhook: str | None,
     notify_on: str,
+    notify_webhook: Optional[str],
+    notify_webhook_secret: Optional[str],
+    notify_email: Optional[str],
 ):
     """Add a new scheduled job to the system crontab."""
     manager = ScheduleManager()
@@ -71,12 +94,12 @@ def schedule_add(
             "failure": NotificationEvent.ON_FAILURE,
         }
         notify_events = set()
-        for name in notify_on.split(","):
-            name = name.strip().lower()
-            if name in event_map:
-                notify_events.add(event_map[name])
+        for ev_name in notify_on.split(","):
+            ev_name = ev_name.strip().lower()
+            if ev_name in event_map:
+                notify_events.add(event_map[ev_name])
             else:
-                click.echo(f"Warning: Unknown notification event '{name}'", err=True)
+                click.echo(f"Warning: Unknown notification event '{ev_name}'", err=True)
 
         notifier_config = NotifierConfig(
             telegram_token=telegram_token,
@@ -85,6 +108,23 @@ def schedule_add(
             notify_on=notify_events,
         )
 
+    notification_config = None
+    if notify_webhook or notify_email:
+        from openmusic.notification.config import NotificationConfig
+
+        ncfg = NotificationConfig(
+            webhook_url=notify_webhook,
+            webhook_secret=notify_webhook_secret,
+            email_to=notify_email,
+        )
+        if notify_email:
+            ncfg.email_from = os.getenv("OPENMUSIC_EMAIL_FROM")
+            ncfg.smtp_server = os.getenv("OPENMUSIC_SMTP_SERVER")
+            ncfg.smtp_port = int(os.getenv("OPENMUSIC_SMTP_PORT", "587"))
+            ncfg.smtp_username = os.getenv("OPENMUSIC_SMTP_USERNAME")
+            ncfg.smtp_password = os.getenv("OPENMUSIC_SMTP_PASSWORD")
+        notification_config = ncfg
+
     try:
         job = manager.add(
             cron_expression=cron,
@@ -92,6 +132,7 @@ def schedule_add(
             name=name,
             description=description,
             notifier_config=notifier_config,
+            notification_config=notification_config,
         )
     except CronParseError as e:
         click.echo(f"Error: Invalid cron expression: {e}", err=True)
@@ -103,7 +144,9 @@ def schedule_add(
     click.echo(f"  Cron:     {job.cron_expression}")
     click.echo(f"  Command:  {job.command}")
     if notifier_config and notifier_config.is_configured:
-        click.echo(f"  Notifications: enabled")
+        click.echo(f"  Chat notifications: enabled (Telegram/Discord)")
+    if notification_config and notification_config.is_configured:
+        click.echo(f"  Webhook/Email notifications: enabled")
 
 
 @schedule.command("remove")

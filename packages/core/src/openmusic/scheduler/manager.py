@@ -19,6 +19,9 @@ from enum import Enum
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
+from openmusic.notification import NotificationConfig as GenericNotificationConfig
+from openmusic.notification import NotificationEvent as GenericNotificationEvent
+from openmusic.notification import Notifier as GenericNotifier
 from openmusic.scheduler.cron import CronExpression, validate_cron
 from openmusic.scheduler.notifier import NotifierConfig, NotificationEvent, notify
 
@@ -50,6 +53,7 @@ class ScheduleJob:
     updated_at: str = field(default_factory=lambda: datetime.now().isoformat())
     description: str = ""
     notifier_config: Optional[Dict[str, Any]] = None
+    notification_config: Optional[Dict[str, Any]] = None
 
     @property
     def parsed_cron(self) -> CronExpression:
@@ -173,6 +177,7 @@ class ScheduleManager:
         name: Optional[str] = None,
         description: str = "",
         notifier_config: Optional[NotifierConfig] = None,
+        notification_config: Optional[GenericNotificationConfig] = None,
     ) -> ScheduleJob:
         """Register a new scheduled job and add it to the system crontab.
 
@@ -181,7 +186,8 @@ class ScheduleManager:
             command: Shell command to execute.
             name: Human-readable name for the job (auto-generated if omitted).
             description: Optional description of the job.
-            notifier_config: Optional notification configuration.
+            notifier_config: Optional Telegram/Discord notification config.
+            notification_config: Optional webhook/email notification config.
 
         Returns:
             The created ScheduleJob.
@@ -200,6 +206,7 @@ class ScheduleManager:
             command=command,
             description=description,
             notifier_config=asdict(notifier_config) if notifier_config else None,
+            notification_config=asdict(notification_config) if notification_config else None,
         )
 
         self._schedules[job.job_id] = job.to_dict()
@@ -333,6 +340,22 @@ class ScheduleManager:
                 output=result.get("output"),
                 error=result.get("error"),
             )
+
+        if job.notification_config:
+            gnc = GenericNotificationConfig(**job.notification_config)
+            if gnc.is_configured:
+                notifier = GenericNotifier(gnc)
+                notifier.notify(GenericNotificationEvent(
+                    status="success" if result["success"] else "failure",
+                    title=job.name,
+                    error_message=result.get("error") if not result["success"] else None,
+                    duration_seconds=None,
+                    metadata={
+                        "command": job.command,
+                        "cron_expression": job.cron_expression,
+                        "output": result.get("output", ""),
+                    },
+                ))
 
         return result
 

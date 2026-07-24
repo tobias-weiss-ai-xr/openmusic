@@ -149,8 +149,8 @@ The following test files were updated to match current APIs:
 
 **Priority**: Low | **Effort**: Low
 
-- [ ] Notification on completion (email/webhook — config stub exists)
-- [ ] Documentation for setting up scheduled generation
+- [x] Notification on completion (email/webhook — config stub exists)
+- [x] Documentation for setting up scheduled generation
 
 ### 2. Analytics Tracking — Channel Performance
 
